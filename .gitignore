@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Capacitor native (generated — re-run npx cap add / sync)
+ios/
+android/
+.capacitor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build
+*.apk
+*.aab
+*.ipa
+DerivedData/
