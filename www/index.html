@@ -57,7 +57,6 @@ body {
   align-items: start;
 }
 
-/* Desktop: Canva-style — panel scrolls, QR stays fixed & fully visible on the right */
 @media (min-width: 961px) {
   body { padding: 16px 20px 32px; overflow-x: hidden; }
   .layout {
@@ -93,7 +92,13 @@ body {
   .stage-actions { display: none; }
   .status { flex: none; }
 }
-
+@media (max-width: 960px) {
+  canvas {
+    width: min(52vw, 200px);   /* 原来是 86vw / 340px */
+    height: auto;
+    max-width: 100%;
+  }
+}
 @media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; gap: 16px; }
   .stage-wrap {
@@ -106,7 +111,6 @@ body {
     border-radius: 0 0 24px 24px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.06);
   }
-  canvas { max-width: min(86vw, 340px); }
   body { padding: 0 0 110px; }
   .panel {
     padding: 20px 16px;
@@ -147,6 +151,7 @@ body {
   min-height: 420px;
   position: relative;
   scroll-margin-top: 12px;
+margin:10px;
 }
 
 h1 {
@@ -673,7 +678,6 @@ canvas {
 .pro-features-banner.show { display: block; }
 .pro-features-banner strong { color: var(--color-washed-black); }
 
-/* Modals */
 .modal-bg {
   position: fixed;
   inset: 0;
@@ -1112,7 +1116,7 @@ canvas {
 
     <div class="divider"></div>
     <div class="field">
-      <label class="lbl">Recent <span id="histLimitTag" class="fixed-tag">Free: 3 items</span></label>
+      <label class="lbl">Recent <span id="histLimitTag" class="fixed-tag">Recent 3 items</span></label>
       <div class="history-list" id="historyList">
         <div style="font-size:13px;color:var(--color-dim);padding:8px 0">No records yet</div>
       </div>
@@ -1140,7 +1144,6 @@ canvas {
   </div>
 </div>
 
-<!-- Main paywall / export gate -->
 <div class="modal-bg" id="paywallModal">
   <div class="modal">
     <h2 id="paywallTitle">Unlock Pro export</h2>
@@ -1185,7 +1188,6 @@ canvas {
   </div>
 </div>
 
-<!-- Limited 3-day offer after decline -->
 <div class="modal-bg" id="offerModal">
   <div class="modal">
     <span class="offer-badge">Limited offer</span>
@@ -1217,9 +1219,7 @@ const $ = id => document.getElementById(id);
 const canvas = $('canvas');
 const ctx = canvas.getContext('2d');
 const statusEl = $('status');
-/* Quiet zone (modules between QR modules and border). Was 4 — too wide visually. */
 const MARGIN = 2, QR_VERSION = 5, SUB = 6;
-/* Decorative border thickness in modules */
 const BORDER_PAD_DECOR = 1;
 function getBorderPad() {
   const showWhite = $('showWhiteFrame') && $('showWhiteFrame').checked;
@@ -1227,26 +1227,17 @@ function getBorderPad() {
   return BORDER_PAD_DECOR;
 }
 
-/* ========== Pro / soft paywall + RevenueCat ========== */
-/*
-  RevenueCat (native via Capacitor):
-  1. Set RC_API_KEYS below from app.revenuecat.com
-  2. Entitlement identifier must be: "pro"
-  3. Package identifiers should match RC_PACKAGE_IDS
-  Browser/web: falls back to mock so UI can be tested without a device.
-*/
 const RC_API_KEYS = {
   ios: 'test_fgVbWVRnTAfuLEuMLmFVoRSaykY',
   android: 'test_fgVbWVRnTAfuLEuMLmFVoRSaykY',
 };
 const RC_ENTITLEMENT = 'pro';
-/** Map UI plan → RevenueCat package identifier (Offering package.identifier) */
 const RC_PACKAGE_IDS = {
-  trial: '$rc_monthly',       // or your free-trial package id
+  trial: '$rc_monthly',
   month: '$rc_monthly',
   year: '$rc_annual',
   lifetime: '$rc_lifetime',
-  offer3: '3day',  // RC Offering package lookup_key
+  offer3: '3day',
 };
 
 let isPro = localStorage.getItem('animqr_pro') === '1';
@@ -1254,7 +1245,7 @@ let offerShownThisSession = false;
 let pendingExportAction = null;
 let rcReady = false;
 let rcOfferings = null;
-let Purchases = null; // @revenuecat/purchases-capacitor
+let Purchases = null;
 
 const FREE_BORDERS = new Set(['none', 'gold']);
 const FREE_SOURCES = new Set(['rocket']);
@@ -1411,7 +1402,6 @@ async function initRevenueCat() {
     return;
   }
   try {
-    // Prefer ES module (works if you later add a bundler); fall back to Capacitor.registerPlugin
     try {
       const mod = await import('@revenuecat/purchases-capacitor');
       Purchases = mod.Purchases;
@@ -1441,11 +1431,9 @@ async function initRevenueCat() {
   }
 }
 
-/** Purchase via RevenueCat package, or mock on web */
 async function completePurchase(plan) {
   statusEl.textContent = 'Processing…';
 
-  // Native + RevenueCat ready → real IAP
   if (isNativeApp() && rcReady && Purchases) {
     try {
       const pkgId = RC_PACKAGE_IDS[plan] || RC_PACKAGE_IDS.month;
@@ -1461,7 +1449,6 @@ async function completePurchase(plan) {
           || rcOfferings.current.availablePackages[0];
       }
       if (!pkg) {
-        // Refresh offerings once
         const offerings = await Purchases.getOfferings();
         rcOfferings = offerings;
         pkg = offerings.current && offerings.current.availablePackages && offerings.current.availablePackages[0];
@@ -1481,7 +1468,6 @@ async function completePurchase(plan) {
       }
       return;
     } catch (err) {
-      // User cancelled or store error
       const msg = (err && (err.message || err.code)) || String(err);
       if (/cancel/i.test(msg) || err.code === '1' || err.code === 'PURCHASE_CANCELLED') {
         statusEl.textContent = 'Purchase cancelled';
@@ -1493,7 +1479,6 @@ async function completePurchase(plan) {
     }
   }
 
-  // Web / mock (for UI testing only — not valid for Next Gen Track review)
   setPro(true);
   hidePaywall();
   hideOfferModal();
@@ -1757,7 +1742,6 @@ function drawBorderDecor(s, mp) {
 }
 
 function drawGoldFrame(ix, iy, iw, ih, mp) {
-  // Solid gold ring filling the pad (clipped to border zone only)
   const g = ctx.createLinearGradient(ix, iy, ix + iw, iy + ih);
   g.addColorStop(0, '#f5e6a8');
   g.addColorStop(0.3, '#c9a227');
@@ -1765,18 +1749,15 @@ function drawGoldFrame(ix, iy, iw, ih, mp) {
   g.addColorStop(0.7, '#a67c1a');
   g.addColorStop(1, '#e8d48b');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, canvas.width, canvas.height); // clip keeps only pad ring
-  // Inner edge highlight
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = 'rgba(255,248,220,0.75)';
   ctx.lineWidth = Math.max(1.2, mp * 0.1);
   pathRoundRect(ix + mp * 0.12, iy + mp * 0.12, iw - mp * 0.24, ih - mp * 0.24, mp * 0.35);
   ctx.stroke();
-  // Outer edge
   ctx.strokeStyle = 'rgba(140,100,20,0.55)';
   ctx.lineWidth = Math.max(1, mp * 0.08);
   pathRoundRect(ix - mp * 0.05, iy - mp * 0.05, iw + mp * 0.1, ih + mp * 0.1, mp * 0.45);
   ctx.stroke();
-  // Corner diamonds
   const corners = [[ix, iy], [ix + iw, iy], [ix, iy + ih], [ix + iw, iy + ih]];
   for (const [cx, cy] of corners) {
     ctx.fillStyle = '#8b6914';
@@ -1795,7 +1776,6 @@ function drawGoldFrame(ix, iy, iw, ih, mp) {
 }
 
 function drawFloralBorder(ix, iy, iw, ih, mp) {
-  // Soft cream-green fill for pad
   ctx.fillStyle = '#eef6ef';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = '#3d7a52';
@@ -1866,7 +1846,6 @@ function drawFlower(cx, cy, size, color) {
 }
 
 function drawNeonFrame(ix, iy, iw, ih, mp) {
-  // Deep navy fill for the pad ring
   ctx.fillStyle = '#0a0a2e';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   const r = mp * 0.5;
@@ -1897,10 +1876,8 @@ function drawPixelFrame(ix, iy, iw, ih, mp) {
   const unit = Math.max(3, mp * 0.55);
   const colors = ['#1009f6', '#505cf9', '#add3e5', '#ffba09', '#e3c7de', '#00e9a7', '#ff3b09'];
   let ci = 0;
-  // Tile the entire pad with colorful pixels
   for (let py = 0; py < canvas.height; py += unit) {
     for (let px = 0; px < canvas.width; px += unit) {
-      // only pad is visible due to clip
       const jitter = ((Math.sin(px * 0.11 + py * 0.07) + 1) * 0.15);
       ctx.fillStyle = colors[ci++ % colors.length];
       ctx.globalAlpha = 0.75 + jitter;
@@ -1973,8 +1950,6 @@ function drawCircuitFrame(ix, iy, iw, ih, mp) {
   ctx.strokeStyle = 'rgba(0,201,138,0.7)';
   ctx.lineWidth = Math.max(1, mp * 0.07);
   ctx.lineCap = 'round';
-  // Horizontal traces top/bottom of pad
-  const midY1 = ix > 0 ? (iy + getBorderPad() * mp * 0.5) : iy;
   ctx.beginPath();
   for (let px = 0; px < canvas.width; px += mp * 0.35) {
     const py = mp * 0.55 + Math.sin(px * 0.28) * mp * 0.12;
@@ -2052,7 +2027,6 @@ function drawMeander(px, py, size, dir) {
   ctx.stroke();
 }
 
-/* ========== Presets ========== */
 const PRESET_SIZE = 400;
 function makeFrameCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 function drawPresetInBaseSpace(size, drawFn) {
@@ -2180,7 +2154,6 @@ function generateFlameFrames(count = 20, size = PRESET_SIZE) {
   return frames;
 }
 
-/* GIF decoder */
 function lzwDecodeGif(data, minCodeSize, pixelCount) {
   const clearCode = 1 << minCodeSize, eoiCode = clearCode + 1;
   let codeSize = minCodeSize + 1, nextCode = eoiCode + 1;
@@ -2512,10 +2485,8 @@ function drawFrame(idx) {
   const showWhite = $('showWhiteFrame').checked;
   const innerX = bp * mp, innerY = bp * mp;
   const innerW = canvas.width - 2 * bp * mp, innerH = canvas.height - 2 * bp * mp;
-  // QR quiet-zone + modules always sit on opaque white (required for scanning)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(innerX, innerY, innerW, innerH);
-  // Outer ring beyond decorative border — only when user opts in
   if (showWhite && bp > 0) {
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
@@ -2614,7 +2585,6 @@ const THEMES = {
 function applyTheme(key) {
   const t = THEMES[key];
   if (!t) return;
-  // Soft paywall: always allow apply for preview
   setSource(t.source, true);
   borderStyle = t.border;
   [...$('borderSeg').children].forEach(b => b.classList.toggle('on', b.dataset.border === t.border));
@@ -2637,7 +2607,6 @@ function applyTheme(key) {
   const names = { paper: 'Paper Minimal', ultramarine: 'Ultramarine Neon', inkgold: 'Ink Gold Guochao', starlight: 'Starlight Roam', garden: 'Garden Vine', circuit: 'Circuit Workshop' };
   statusEl.textContent = `Applied "${names[key]}" — updating…`;
   updateProFeaturesBanner();
-  // Live: regenerate with new theme params if we already have content
   if (qr && (animSource !== 'upload' || pendingBuf)) {
     generate();
   } else {
@@ -2669,7 +2638,6 @@ function liveRedraw() {
 $('borderSeg').addEventListener('click', e => {
   const btn = e.target.closest('button');
   if (!btn) return;
-  // Always allow selection (soft paywall)
   [...$('borderSeg').children].forEach(x => x.classList.remove('on'));
   btn.classList.add('on');
   borderStyle = btn.dataset.border;
@@ -2682,7 +2650,6 @@ $('showWhiteFrame').addEventListener('change', () => {
 });
 
 function setSource(src, silent) {
-  // Always allow (soft paywall)
   const prev = animSource;
   animSource = src;
   [...$('sourceSeg').children].forEach(b => b.classList.toggle('on', b.dataset.source === src));
@@ -2701,7 +2668,6 @@ function setSource(src, silent) {
     if (!silent) statusEl.textContent = `Selected "${{ car: 'Car', rocket: 'Rocket', flame: 'Flame' }[src]}" — updating…`;
   }
   updateProFeaturesBanner();
-  // Live regenerate when switching preset animation
   if (!silent && prev !== src && !isUpload && qr) {
     generate();
   }
@@ -2762,7 +2728,6 @@ $('batchMode').addEventListener('change', () => {
 function scrollToStage() {
   const el = $('stageWrap');
   if (!el) return;
-  // Mobile: preview is on top; still scroll into view for export buttons
   requestAnimationFrame(() => {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -2955,7 +2920,6 @@ async function exportGif() {
     workerScript = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js';
   }
 
-  // Prefer 1–2 workers; fall back to main-thread if workers fail
   const tryRender = (workers) => new Promise((resolve, reject) => {
     let settled = false;
     const gif = new GIF({
@@ -2984,12 +2948,11 @@ async function exportGif() {
       clearTimeout(failTimer);
       resolve(blob);
     });
-    // Add frames as ImageData copies (more reliable than live canvas)
     for (let i = 0; i < total; i++) {
       drawFrame(i);
       const img = ctx.getImageData(0, 0, w, h);
       gif.addFrame(img, { delay: Math.max(gifFrames[i].delay || 40, 30), copy: true });
-      setEncodeProgress(true, ((i + 1) / total) * 35); // first 35% = frame add
+      setEncodeProgress(true, ((i + 1) / total) * 35);
     }
     statusEl.textContent = 'Encoding GIF…';
     try {
@@ -3126,7 +3089,6 @@ $('btnCloseOffer').addEventListener('click', hideOfferModal);
 $('btnTakeOffer').addEventListener('click', () => completePurchase('offer3'));
 document.querySelector('#offerModal .price-btn')?.addEventListener('click', () => completePurchase('offer3'));
 
-/* ===== Init demo ===== */
 shapeMask = buildShapeMask();
 updateGapUI();
 setSource('rocket', true);
