@@ -1,0 +1,3160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>AnimQR · Animated Art QR Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --color-ultramarine: #1009f6;
+  --color-gold: #ffba09;
+  --color-forest: #304801;
+  --color-tangerine: #ff3b09;
+  --color-royal: #505cf9;
+  --color-sky: #add3e5;
+  --color-thistle: #e3c7de;
+  --color-mint: #00e9a7;
+  --color-cream: #f0f0ec;
+  --color-pearl: #f7f7f3;
+  --color-white: #ffffff;
+  --color-smoke: #d4d4d0;
+  --color-concrete: #eaeae6;
+  --color-washed-black: #1a1a1a;
+  --color-ink: #222222;
+  --color-charcoal: #4d4d4d;
+  --color-dim: #6d6868;
+  --color-black: #000000;
+
+  --font: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --radius-input: 4px;
+  --radius-card: 24px;
+  --radius-hero: 40px;
+  --radius-pill: 999px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--color-cream);
+  color: var(--color-washed-black);
+  min-height: 100vh;
+  padding: 24px 20px 80px;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+  gap: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* Desktop: Canva-style — panel scrolls, QR stays fixed & fully visible on the right */
+@media (min-width: 961px) {
+  body { padding: 16px 20px 32px; overflow-x: hidden; }
+  .layout {
+    grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+    gap: 20px;
+    max-width: 1400px;
+    height: calc(100vh - 32px);
+  }
+  .panel {
+    max-height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .stage-wrap {
+    position: sticky;
+    top: 0;
+    align-self: stretch;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px 16px;
+  }
+  .stage-wrap canvas {
+    max-width: 100%;
+    max-height: calc(100vh - 160px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  .stage-actions { display: none; }
+  .status { flex: none; }
+}
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; }
+  .stage-wrap {
+    order: -1;
+    min-height: auto;
+    padding: 16px 12px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+  canvas { max-width: min(86vw, 340px); }
+  body { padding: 0 0 110px; }
+  .panel {
+    padding: 20px 16px;
+    border-radius: 24px 24px 0 0;
+    margin: 0 8px;
+  }
+  h1 { font-size: 22px; }
+  .btnrow { gap: 8px; }
+  button.act { padding: 13px 14px; font-size: 13px; }
+  .export-sticky {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: linear-gradient(to top, var(--color-white) 75%, rgba(255,255,255,0));
+    padding: 14px 0 10px;
+    margin: 0 -4px;
+  }
+  .howto { margin-left: 0; margin-right: 0; }
+}
+
+.panel {
+  background: var(--color-white);
+  border-radius: var(--radius-card);
+  padding: 28px 24px;
+  border: 1px solid var(--color-concrete);
+}
+.stage-wrap {
+  background: var(--color-pearl);
+  border-radius: var(--radius-hero);
+  padding: 28px 24px 24px;
+  border: 1px solid var(--color-concrete);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+  position: relative;
+  scroll-margin-top: 12px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-washed-black);
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pro-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--color-ultramarine);
+  color: var(--color-white);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+.subtitle {
+  color: var(--color-charcoal);
+  font-size: 14px;
+  margin: 8px 0 14px;
+  line-height: 1.5;
+}
+
+.howto {
+  background: #eeedff;
+  border: 1px solid rgba(16,9,246,0.18);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--color-ink);
+  line-height: 1.55;
+}
+.howto ol {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+.howto li { margin-bottom: 2px; }
+.howto strong { color: var(--color-ultramarine); }
+
+.field { margin-bottom: 18px; }
+label.lbl {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+label.lbl b {
+  color: var(--color-ultramarine);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-transform: none;
+  font-size: 13px;
+}
+
+input[type="text"], textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-input);
+  border: 1px solid #b3b3b3;
+  background: var(--color-cream);
+  color: var(--color-washed-black);
+  font-size: 14px;
+  font-family: var(--font);
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-ultramarine);
+}
+textarea { min-height: 80px; resize: vertical; line-height: 1.45; }
+
+.filebox {
+  position: relative;
+  border: 1.5px dashed var(--color-smoke);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--color-cream);
+  transition: border-color 0.15s, background 0.15s;
+}
+.filebox:hover { border-color: var(--color-ultramarine); background: var(--color-pearl); }
+.filebox input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.filebox .t1 { font-size: 14px; font-weight: 700; color: var(--color-washed-black); }
+.filebox .t2 { font-size: 12px; color: var(--color-dim); margin-top: 4px; }
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: var(--color-cream);
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid var(--color-concrete);
+}
+.seg.four { grid-template-columns: repeat(4, 1fr); }
+.seg.borders { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.seg.borders button {
+  padding: 10px 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.seg.borders button .bicon {
+  display: block;
+  width: 26px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  position: relative;
+}
+.seg.borders button[data-border="none"] .bicon { border-style: dashed; opacity: 0.45; }
+.seg.borders button[data-border="gold"] .bicon {
+  border-color: #c9a227;
+  border-width: 2.5px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 2px rgba(201,162,39,0.25);
+}
+.seg.borders button[data-border="floral"] .bicon {
+  border-color: #3f9e63;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #f472b6;
+}
+.seg.borders button[data-border="neon"] .bicon {
+  border-color: var(--color-ultramarine);
+  box-shadow: 0 0 0 2px rgba(16,9,246,0.2);
+  border-radius: 4px;
+}
+.seg.borders button[data-border="pixel"] .bicon {
+  border-color: #e8a317;
+  border-style: dotted;
+  border-width: 3px;
+}
+.seg.borders button[data-border="star"] .bicon {
+  border-color: #6b5ce6;
+  background: #f0eeff;
+  border-radius: 7px;
+}
+.seg.borders button[data-border="circuit"] .bicon {
+  border-color: #0d9f7a;
+  background: #e8faf4;
+  border-radius: 4px;
+}
+.seg.borders button[data-border="chinese"] .bicon {
+  border-color: #c9a227;
+  background: #fdf6e8;
+  border-radius: 3px;
+}
+.seg button {
+  padding: 9px 6px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-charcoal);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.seg button.on {
+  background: var(--color-ultramarine);
+  color: var(--color-white);
+}
+.seg.borders button.on {
+  background: #eeedff;
+  color: var(--color-ultramarine);
+  border: 1px solid rgba(16,9,246,0.25);
+}
+.seg button .lock {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-concrete);
+  border-radius: 2px;
+  outline: none;
+  margin: 8px 0 4px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-ultramarine);
+  cursor: pointer;
+  border: 2px solid var(--color-white);
+  box-shadow: 0 0 0 1px var(--color-smoke);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-ultramarine);
+  cursor: pointer;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  user-select: none;
+  color: var(--color-ink);
+}
+.check input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--color-ultramarine);
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-concrete);
+  margin: 22px 0;
+}
+
+.btnrow {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+button.act {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: transform 0.1s, opacity 0.15s, background 0.15s;
+}
+button.act:active { transform: scale(0.98); }
+button.act:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.b-primary {
+  background: var(--color-gold);
+  color: var(--color-washed-black);
+  border: 1px solid var(--color-washed-black);
+}
+.b-ghost {
+  background: transparent;
+  color: var(--color-washed-black);
+  border: 1px solid var(--color-washed-black);
+}
+.b-brand {
+  background: var(--color-ultramarine);
+  color: var(--color-white);
+}
+.b-soft {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  border: 1px solid var(--color-smoke);
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--color-concrete);
+}
+.status {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--color-charcoal);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 420px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-dim);
+  margin-top: 18px;
+  line-height: 1.6;
+}
+.hint b { color: var(--color-charcoal); }
+
+.gapbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-dim);
+  margin-top: 2px;
+}
+.gapbar .bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-concrete);
+  position: relative;
+  overflow: hidden;
+}
+.gapbar .bar i {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--color-ultramarine);
+  border-radius: 2px;
+  transition: width 0.15s;
+}
+
+.preset-hint {
+  font-size: 12px;
+  color: var(--color-dim);
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.highlight {
+  border: 1px solid var(--color-concrete);
+  background: var(--color-pearl);
+  border-radius: 16px;
+  padding: 14px;
+  margin: -2px 0 18px;
+}
+.fixed-tag {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--color-ultramarine);
+  background: #eeedff;
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  margin-left: 6px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.pro-soft-tag {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--color-dim);
+  background: var(--color-concrete);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  margin-left: 4px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.adv {
+  margin-top: 22px;
+  border: 1px solid var(--color-concrete);
+  border-radius: 16px;
+  background: var(--color-pearl);
+}
+.adv > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-charcoal);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  user-select: none;
+  border-radius: 16px;
+}
+.adv > summary::-webkit-details-marker { display: none; }
+.adv > summary:hover { color: var(--color-washed-black); }
+.adv > summary .chev {
+  font-size: 12px;
+  color: var(--color-ultramarine);
+  transition: transform 0.2s;
+}
+.adv[open] > summary .chev { transform: rotate(180deg); }
+.adv[open] > summary { border-bottom: 1px solid var(--color-concrete); border-radius: 16px 16px 0 0; }
+.adv-body { padding: 18px 16px 6px; }
+.adv-note {
+  font-size: 12px;
+  color: var(--color-dim);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.theme-card {
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-concrete);
+  border-radius: 16px;
+  padding: 14px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+.theme-card:hover { border-color: var(--color-ultramarine); background: var(--color-pearl); }
+.theme-card.on {
+  border-color: var(--color-ultramarine);
+  background: #eeedff;
+}
+.theme-card .tname {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-washed-black);
+  margin-bottom: 3px;
+}
+.theme-card .tdesc {
+  font-size: 11px;
+  color: var(--color-dim);
+  line-height: 1.35;
+}
+.theme-card .lock {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-ultramarine);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-cream);
+  border: 1px solid var(--color-concrete);
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.15s;
+}
+.hist-item:hover { border-color: var(--color-ultramarine); }
+.hist-item .hthumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--color-concrete);
+  flex: none;
+}
+.hist-item .hmeta { flex: 1; min-width: 0; }
+.hist-item .hurl {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-washed-black);
+  font-weight: 500;
+}
+.hist-item .htime {
+  color: var(--color-dim);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.logo-preview {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--color-white);
+  border: 1px solid var(--color-concrete);
+  margin-top: 8px;
+}
+.batch-status { font-size: 12px; color: var(--color-dim); margin-top: 6px; }
+.watermark-note {
+  font-size: 11px;
+  color: var(--color-dim);
+  text-align: center;
+  margin-top: 10px;
+}
+
+.pro-features-banner {
+  display: none;
+  background: #fff8e8;
+  border: 1px solid rgba(255,186,9,0.45);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--color-charcoal);
+  line-height: 1.45;
+}
+.pro-features-banner.show { display: block; }
+.pro-features-banner strong { color: var(--color-washed-black); }
+
+/* Modals */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.5);
+  z-index: 100;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 520px) {
+  .modal-bg {
+    align-items: center;
+    padding: 24px;
+  }
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--color-white);
+  border-radius: 28px 28px 0 0;
+  padding: 28px 22px 32px;
+  max-width: 420px;
+  width: 100%;
+  border: 1px solid var(--color-concrete);
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 520px) {
+  .modal {
+    border-radius: var(--radius-hero);
+    padding: 32px 28px;
+  }
+}
+.modal h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--color-washed-black);
+  line-height: 1.25;
+}
+.modal .modal-sub {
+  font-size: 14px;
+  color: var(--color-charcoal);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.benefits {
+  background: var(--color-pearl);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+.benefits li {
+  margin: 6px 0 6px 4px;
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.benefits li::before {
+  content: "✓";
+  color: var(--color-ultramarine);
+  font-weight: 700;
+  flex: none;
+}
+.used-pro-list {
+  background: #fff8e8;
+  border: 1px solid rgba(255,186,9,0.4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.used-pro-list .title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--color-washed-black);
+}
+.used-pro-list ul {
+  margin: 0 0 0 16px;
+  padding: 0;
+  color: var(--color-charcoal);
+}
+.price-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.price-btn {
+  padding: 15px 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--color-concrete);
+  background: var(--color-cream);
+  color: var(--color-washed-black);
+  font-weight: 700;
+  font-size: 14px;
+  font-family: var(--font);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.price-btn:hover { border-color: var(--color-ultramarine); }
+.price-btn.hl {
+  border-color: var(--color-ultramarine);
+  background: #eeedff;
+}
+.price-btn .tag {
+  position: absolute;
+  top: -9px;
+  right: 14px;
+  background: var(--color-gold);
+  color: var(--color-washed-black);
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  border: 1px solid var(--color-washed-black);
+}
+.price-btn .price {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ultramarine);
+}
+.price-btn .plan-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-dim);
+  display: block;
+  margin-top: 2px;
+}
+.modal-footer-note {
+  font-size: 11px;
+  color: var(--color-dim);
+  margin-top: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+.offer-badge {
+  display: inline-block;
+  background: var(--color-tangerine);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 10px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+  margin-bottom: 12px;
+}
+
+.stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+  width: 100%;
+  max-width: 360px;
+}
+.stage-actions button {
+  flex: 1;
+  min-width: 72px;
+  padding: 11px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  border: 1px solid var(--color-washed-black);
+  background: var(--color-white);
+  color: var(--color-washed-black);
+}
+.stage-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
+.stage-actions button.primary {
+  background: var(--color-gold);
+  border-color: var(--color-washed-black);
+}
+
+.encode-progress {
+  display: none;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 12px;
+  text-align: center;
+}
+.encode-progress.show { display: block; }
+.encode-progress .bar-track {
+  height: 6px;
+  background: var(--color-concrete);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.encode-progress .bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--color-ultramarine);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+.encode-progress .pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-charcoal);
+}
+
+.theme-card .swatch {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+.theme-card .swatch i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="panel">
+    <h1>AnimQR <span class="pro-badge" id="proBadge" style="display:none">PRO</span></h1>
+    <p class="subtitle">Animated art QR codes · Subpixel detail · Fancy borders · Theme templates</p>
+
+    <div class="howto" id="howtoBox">
+      <strong>How to use</strong>
+      <ol>
+        <li>Paste your link below (or pick a theme)</li>
+        <li>Tap <strong>Generate QR Code</strong></li>
+        <li>Preview plays above · Export GIF / PNG when ready</li>
+      </ol>
+      <div style="margin-top:8px;font-size:12px;color:var(--color-dim)">Try Pro styles freely — export unlocks with Pro if you used them.</div>
+    </div>
+
+    <div class="field">
+      <div class="section-label">One-tap Themes</div>
+      <div class="theme-grid" id="themeGrid">
+        <div class="theme-card" data-theme="paper">
+          <div class="tname">Paper Minimal</div>
+          <div class="tdesc">Clean · No border · Easy scan</div>
+          <div class="swatch"><i style="background:#f0f0ec"></i><i style="background:#1a1a1a"></i><i style="background:#eaeae6"></i></div>
+        </div>
+        <div class="theme-card" data-theme="ultramarine">
+          <div class="tname">Ultramarine</div>
+          <div class="tdesc">Neon glow · High contrast</div>
+          <div class="swatch"><i style="background:#1009f6"></i><i style="background:#505cf9"></i><i style="background:#add3e5"></i></div>
+          <span class="lock">Pro export</span>
+        </div>
+        <div class="theme-card" data-theme="inkgold">
+          <div class="tname">Ink & Gold</div>
+          <div class="tdesc">Vermilion · Chinese frame</div>
+          <div class="swatch"><i style="background:#8a1f1f"></i><i style="background:#c9a227"></i><i style="background:#fdf6e8"></i></div>
+          <span class="lock">Pro export</span>
+        </div>
+        <div class="theme-card" data-theme="starlight">
+          <div class="tname">Starlight</div>
+          <div class="tdesc">Night sky · Soft dots</div>
+          <div class="swatch"><i style="background:#1a1540"></i><i style="background:#ffba09"></i><i style="background:#e3c7de"></i></div>
+          <span class="lock">Pro export</span>
+        </div>
+        <div class="theme-card" data-theme="garden">
+          <div class="tname">Garden</div>
+          <div class="tdesc">Vines · Soft floral</div>
+          <div class="swatch"><i style="background:#3d7a52"></i><i style="background:#e8a0c0"></i><i style="background:#f0f0ec"></i></div>
+          <span class="lock">Pro export</span>
+        </div>
+        <div class="theme-card" data-theme="circuit">
+          <div class="tname">Circuit</div>
+          <div class="tdesc">Mint traces · Tech</div>
+          <div class="swatch"><i style="background:#0a1f1a"></i><i style="background:#00c98a"></i><i style="background:#e8faf4"></i></div>
+          <span class="lock">Pro export</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl" for="url">Link</label>
+      <input type="text" id="url" value="https://example.com" placeholder="https://..." />
+    </div>
+
+    <div class="field" id="batchField" style="display:none">
+      <label class="lbl">Batch Links <span class="pro-soft-tag">Pro export</span></label>
+      <textarea id="batchUrls" placeholder="One link per line"></textarea>
+      <div class="batch-status" id="batchStatus"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="batchMode" /> Batch Generate <span class="pro-soft-tag">Pro export</span></label>
+
+    <div class="field highlight">
+      <label class="lbl">Border <span class="fixed-tag">v5 · 37×37</span></label>
+      <div class="seg borders" id="borderSeg">
+        <button data-border="none" class="on"><span class="bicon"></span>None</button>
+        <button data-border="gold"><span class="bicon"></span>Gold</button>
+        <button data-border="floral"><span class="bicon"></span>Floral<span class="lock">Pro</span></button>
+        <button data-border="neon"><span class="bicon"></span>Neon<span class="lock">Pro</span></button>
+        <button data-border="pixel"><span class="bicon"></span>Pixel<span class="lock">Pro</span></button>
+        <button data-border="star"><span class="bicon"></span>Starry<span class="lock">Pro</span></button>
+        <button data-border="circuit"><span class="bicon"></span>Circuit<span class="lock">Pro</span></button>
+        <button data-border="chinese"><span class="bicon"></span>Chinese<span class="lock">Pro</span></button>
+      </div>
+      <p class="preset-hint" id="borderHint">No border keeps maximum quiet zone, best for scanning.</p>
+      <label class="check" style="margin-top:10px;margin-bottom:0">
+        <input type="checkbox" id="showWhiteFrame" checked /> Keep white outer frame
+      </label>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Error correction level</label>
+      <div class="seg four" id="eclSeg">
+        <button data-ecl="L">L 7%</button>
+        <button data-ecl="M">M 15%</button>
+        <button data-ecl="Q" class="on">Q 25%</button>
+        <button data-ecl="H">H 30%</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Animation source</label>
+      <div class="seg four" id="sourceSeg">
+        <button data-source="upload"><span class="lock">Pro</span>Upload</button>
+        <button data-source="car"><span class="lock">Pro</span>Car</button>
+        <button data-source="rocket" class="on">Rocket</button>
+        <button data-source="flame"><span class="lock">Pro</span>Flame</button>
+      </div>
+      <p class="preset-hint" id="sourceHint">Default: Rocket launch (procedural) · Free to use</p>
+    </div>
+
+    <div class="field" id="uploadField" style="display:none">
+      <label class="lbl">GIF file <span class="pro-soft-tag">Pro export</span></label>
+      <div class="filebox">
+        <input type="file" id="gif" accept="image/gif" />
+        <div class="t1">Choose GIF</div>
+        <div class="t2" id="fileName">Try it · Export needs Pro</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Center Logo <span class="pro-soft-tag">Pro export</span></label>
+      <div class="filebox">
+        <input type="file" id="logoFile" accept="image/*" />
+        <div class="t1">Upload icon</div>
+        <div class="t2" id="logoName">Transparent PNG recommended</div>
+      </div>
+      <img id="logoPreview" class="logo-preview" style="display:none" alt="logo" />
+      <label class="check" style="margin-top:8px"><input type="checkbox" id="logoEnable" /> Enable center Logo</label>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label class="lbl">Module shape</label>
+      <div class="seg" id="shapeSeg">
+        <button data-shape="square" class="on">Square</button>
+        <button data-shape="rounded">Liquid</button>
+        <button data-shape="dot">Dot</button>
+      </div>
+    </div>
+
+    <details class="adv">
+      <summary>Advanced settings <span class="chev">▼</span></summary>
+      <div class="adv-body">
+        <p class="adv-note">Fine-tune rendering. Usually not needed.</p>
+        <div class="field">
+          <label class="lbl">Detail strength <b id="detailVal">100</b></label>
+          <input type="range" id="detail" min="0" max="200" value="100" />
+          <div class="gapbar"><span>Solid</span><span class="bar"><i id="detailFill" style="width:50%"></i></span><span>Rich</span></div>
+        </div>
+        <div class="field">
+          <label class="lbl">Hue coherence <b id="coherenceVal">70</b></label>
+          <input type="range" id="coherence" min="0" max="100" value="70" />
+          <div class="gapbar"><span>Original</span><span class="bar"><i id="coherenceFill" style="width:70%"></i></span><span>Unified</span></div>
+        </div>
+        <div class="field">
+          <label class="lbl">Soften <b id="softenVal">4</b></label>
+          <input type="range" id="soften" min="0" max="100" value="4" />
+          <div class="gapbar"><span>Sharp</span><span class="bar"><i id="softenFill" style="width:4%"></i></span><span>Soft</span></div>
+        </div>
+        <div class="field">
+          <label class="lbl">Dark luminance cap <b id="darkLumVal">88</b></label>
+          <input type="range" id="darkLum" min="50" max="130" value="88" />
+          <div class="gapbar"><span>Dark · easy scan</span><span class="bar"><i id="darkFill" style="width:50%"></i></span><span>Bright</span></div>
+        </div>
+        <div class="field">
+          <label class="lbl">Light luminance floor <b id="lightLumVal">215</b></label>
+          <input type="range" id="lightLum" min="150" max="250" value="215" />
+          <div class="gapbar"><span>Contrast</span><span class="bar"><i id="gapFill" style="width:60%"></i></span><span id="gapVal">127</span></div>
+        </div>
+        <div class="field">
+          <label class="lbl">Color vividness <b id="vividVal">1.2</b></label>
+          <input type="range" id="vivid" min="10" max="20" value="12" />
+        </div>
+        <div class="field">
+          <label class="lbl">Module pixel size <b id="moduleSizeVal">18</b></label>
+          <input type="range" id="moduleSize" min="6" max="36" value="18" />
+        </div>
+        <label class="check"><input type="checkbox" id="colorLight" checked /> Light color follows animation</label>
+        <label class="check"><input type="checkbox" id="grayGuard" checked /> Gray-frame color guard</label>
+        <label class="check"><input type="checkbox" id="paletteSnap" checked /> Palette snap</label>
+      </div>
+    </details>
+
+    <div class="btnrow">
+      <button class="act b-primary" id="btnGenerate">Generate QR Code</button>
+    </div>
+    <div class="export-sticky">
+      <div class="btnrow">
+        <button class="act b-ghost" id="btnPlay" disabled>Play</button>
+        <button class="act b-ghost" id="btnPause" disabled>Pause</button>
+      </div>
+      <div class="btnrow">
+        <button class="act b-ghost" id="btnExportGif" disabled>GIF</button>
+        <button class="act b-ghost" id="btnExportPng" disabled>PNG</button>
+        <button class="act b-soft" id="btnShare" disabled>Share</button>
+      </div>
+      <div id="proFeaturesBanner" class="pro-features-banner"></div>
+      <div class="btnrow">
+        <button class="act b-brand" id="btnUpgrade">Upgrade to Pro</button>
+      </div>
+      <p class="watermark-note" id="wmNote">Free: watermark on export · Pro: HD watermark-free</p>
+    </div>
+
+    <div class="divider"></div>
+    <div class="field">
+      <label class="lbl">Recent <span id="histLimitTag" class="fixed-tag">Free: 3 items</span></label>
+      <div class="history-list" id="historyList">
+        <div style="font-size:13px;color:var(--color-dim);padding:8px 0">No records yet</div>
+      </div>
+    </div>
+
+    <p class="hint">
+      <b>If it doesn't scan:</b> Border → None → Keep white outer frame → Dark luminance 80–90 → Detail below 50 → Error correction Q/M<br>
+      <b>Pro export:</b> Fancy borders, Car/Flame/Upload GIF, Logo, Batch, no watermark, unlimited history
+    </p>
+  </div>
+
+  <div class="stage-wrap" id="stageWrap">
+    <canvas id="canvas" width="300" height="300"></canvas>
+    <div class="status" id="status">Loading demo...</div>
+    <div class="encode-progress" id="encodeProgress">
+      <div class="pct" id="encodePct">Encoding 0%</div>
+      <div class="bar-track"><div class="bar-fill" id="encodeFill"></div></div>
+    </div>
+    <div class="stage-actions" id="stageActions">
+      <button type="button" id="stagePlay" disabled>Play</button>
+      <button type="button" id="stagePause" disabled>Pause</button>
+      <button type="button" class="primary" id="stageExportGif" disabled>GIF</button>
+      <button type="button" class="primary" id="stageExportPng" disabled>PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main paywall / export gate -->
+<div class="modal-bg" id="paywallModal">
+  <div class="modal">
+    <h2 id="paywallTitle">Unlock Pro export</h2>
+    <p class="modal-sub" id="paywallSub">You can preview everything for free. Export without watermark and with Pro styles needs Pro.</p>
+    <div class="used-pro-list" id="usedProBox" style="display:none">
+      <div class="title">Pro features in this design</div>
+      <ul id="usedProList"></ul>
+    </div>
+    <ul class="benefits">
+      <li>All borders &amp; animations (Neon, Floral, Starry…)</li>
+      <li>Upload custom GIF · Center Logo · Batch</li>
+      <li>Watermark-free HD GIF &amp; PNG</li>
+      <li>Unlimited history</li>
+    </ul>
+    <div class="price-row">
+      <button class="price-btn" data-plan="trial" type="button">
+        <span>7-day free trial<span class="plan-desc">Then $2.99/mo · cancel anytime</span></span>
+        <span class="price">Free</span>
+      </button>
+      <button class="price-btn" data-plan="month" type="button">
+        <span>Monthly<span class="plan-desc">Full Pro access</span></span>
+        <span class="price">$2.99</span>
+      </button>
+      <button class="price-btn hl" data-plan="year" type="button">
+        <span>Yearly<span class="plan-desc">Best value · ~$1.67/mo</span></span>
+        <span class="price">$19.99</span>
+        <span class="tag">Save 44%</span>
+      </button>
+      <button class="price-btn" data-plan="lifetime" type="button">
+        <span>Lifetime<span class="plan-desc">One-time · forever</span></span>
+        <span class="price">$39.99</span>
+      </button>
+    </div>
+    <div class="btnrow">
+      <button class="act b-ghost" id="btnClosePaywall" type="button">Maybe later</button>
+      <button class="act b-primary" id="btnMockPurchase" type="button">Continue with Pro</button>
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="act b-soft" id="btnRestore" type="button">Restore purchases</button>
+    </div>
+    <p class="modal-footer-note">RevenueCat · Capacitor · Real IAP on device · Web uses mock for UI only</p>
+  </div>
+</div>
+
+<!-- Limited 3-day offer after decline -->
+<div class="modal-bg" id="offerModal">
+  <div class="modal">
+    <span class="offer-badge">Limited offer</span>
+    <h2>3-day Pro for $0.99</h2>
+    <p class="modal-sub">One-time intro. Full Pro for 3 days — export without limits, then back to free.</p>
+    <ul class="benefits">
+      <li>All Pro borders &amp; animations</li>
+      <li>Logo · Batch · GIF upload</li>
+      <li>Watermark-free export</li>
+    </ul>
+    <div class="price-row">
+      <button class="price-btn hl" data-plan="offer3" type="button">
+        <span>3-day Pro pass<span class="plan-desc">One-time · no auto-renew</span></span>
+        <span class="price">$0.99</span>
+      </button>
+    </div>
+    <div class="btnrow">
+      <button class="act b-ghost" id="btnCloseOffer" type="button">No thanks</button>
+      <button class="act b-primary" id="btnTakeOffer" type="button">Get 3-day Pro</button>
+    </div>
+    <p class="modal-footer-note">Offer shown once per session after declining main plans</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+const statusEl = $('status');
+/* Quiet zone (modules between QR modules and border). Was 4 — too wide visually. */
+const MARGIN = 2, QR_VERSION = 5, SUB = 6;
+/* Decorative border thickness in modules */
+const BORDER_PAD_DECOR = 1;
+function getBorderPad() {
+  const showWhite = $('showWhiteFrame') && $('showWhiteFrame').checked;
+  if (borderStyle === 'none') return showWhite ? 1 : 0;
+  return BORDER_PAD_DECOR;
+}
+
+/* ========== Pro / soft paywall + RevenueCat ========== */
+/*
+  RevenueCat (native via Capacitor):
+  1. Set RC_API_KEYS below from app.revenuecat.com
+  2. Entitlement identifier must be: "pro"
+  3. Package identifiers should match RC_PACKAGE_IDS
+  Browser/web: falls back to mock so UI can be tested without a device.
+*/
+const RC_API_KEYS = {
+  ios: 'test_fgVbWVRnTAfuLEuMLmFVoRSaykY',
+  android: 'test_fgVbWVRnTAfuLEuMLmFVoRSaykY',
+};
+const RC_ENTITLEMENT = 'pro';
+/** Map UI plan → RevenueCat package identifier (Offering package.identifier) */
+const RC_PACKAGE_IDS = {
+  trial: '$rc_monthly',       // or your free-trial package id
+  month: '$rc_monthly',
+  year: '$rc_annual',
+  lifetime: '$rc_lifetime',
+  offer3: '3day',  // RC Offering package lookup_key
+};
+
+let isPro = localStorage.getItem('animqr_pro') === '1';
+let offerShownThisSession = false;
+let pendingExportAction = null;
+let rcReady = false;
+let rcOfferings = null;
+let Purchases = null; // @revenuecat/purchases-capacitor
+
+const FREE_BORDERS = new Set(['none', 'gold']);
+const FREE_SOURCES = new Set(['rocket']);
+const PRO_BORDERS = new Set(['floral', 'neon', 'pixel', 'star', 'circuit', 'chinese']);
+const PRO_SOURCES = new Set(['upload', 'car', 'flame']);
+const PRO_THEMES = new Set(['ultramarine', 'inkgold', 'starlight', 'garden', 'circuit']);
+
+const FEATURE_LABELS = {
+  border_floral: 'Floral border',
+  border_neon: 'Neon border',
+  border_pixel: 'Pixel border',
+  border_star: 'Starry border',
+  border_circuit: 'Circuit border',
+  border_chinese: 'Chinese border',
+  source_upload: 'Custom GIF upload',
+  source_car: 'Car animation',
+  source_flame: 'Flame animation',
+  logo: 'Center Logo',
+  batch: 'Batch generate',
+  watermark: 'Remove watermark',
+};
+
+function isNativeApp() {
+  try {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  } catch (_) { return false; }
+}
+
+function setPro(v) {
+  isPro = !!v;
+  localStorage.setItem('animqr_pro', isPro ? '1' : '0');
+  updateProUI();
+  updateProFeaturesBanner();
+}
+
+function updateProUI() {
+  $('proBadge').style.display = isPro ? '' : 'none';
+  $('wmNote').textContent = isPro
+    ? 'Pro activated · Watermark-free HD export'
+    : 'Free: try all styles · Pro styles need Pro to export watermark-free';
+  $('histLimitTag').textContent = isPro ? 'Unlimited' : 'Free: 3 items';
+  document.querySelectorAll('#borderSeg button .lock').forEach(lock => {
+    const btn = lock.closest('button');
+    const free = FREE_BORDERS.has(btn.dataset.border);
+    lock.style.display = (isPro || free) ? 'none' : '';
+  });
+  document.querySelectorAll('#sourceSeg button .lock').forEach(lock => {
+    const btn = lock.closest('button');
+    const free = FREE_SOURCES.has(btn.dataset.source);
+    lock.style.display = (isPro || free) ? 'none' : '';
+  });
+  document.querySelectorAll('.theme-card .lock').forEach(el => {
+    el.style.display = isPro ? 'none' : '';
+  });
+  $('batchField').style.display = $('batchMode').checked ? '' : 'none';
+}
+
+function getActiveProFeatures() {
+  const list = [];
+  if (PRO_BORDERS.has(borderStyle)) list.push('border_' + borderStyle);
+  if (PRO_SOURCES.has(animSource)) list.push('source_' + animSource);
+  if (logoEnabled && logoImg) list.push('logo');
+  if ($('batchMode').checked) list.push('batch');
+  return list;
+}
+
+function updateProFeaturesBanner() {
+  const el = $('proFeaturesBanner');
+  if (isPro) {
+    el.classList.remove('show');
+    el.innerHTML = '';
+    return;
+  }
+  const feats = getActiveProFeatures();
+  if (!feats.length) {
+    el.classList.remove('show');
+    el.innerHTML = '';
+    return;
+  }
+  const names = feats.map(k => FEATURE_LABELS[k] || k).join(' · ');
+  el.innerHTML = `<strong>Pro styles in use:</strong> ${names}. Export will ask to unlock Pro (or use free styles: None/Gold border + Rocket).`;
+  el.classList.add('show');
+}
+
+function needsProToExport() {
+  if (isPro) return false;
+  return getActiveProFeatures().length > 0;
+}
+
+function showPaywall(opts = {}) {
+  const { reason = 'upgrade', features = null } = opts;
+  const box = $('usedProBox');
+  const listEl = $('usedProList');
+  const feats = features || getActiveProFeatures();
+  if (reason === 'export' && feats.length) {
+    $('paywallTitle').textContent = 'Unlock to export this design';
+    $('paywallSub').textContent = 'This QR uses Pro styles. Upgrade to export without watermark, or switch to free styles (None/Gold + Rocket).';
+    listEl.innerHTML = feats.map(k => `<li>${FEATURE_LABELS[k] || k}</li>`).join('');
+    box.style.display = '';
+  } else {
+    $('paywallTitle').textContent = 'Upgrade to Pro';
+    $('paywallSub').textContent = isNativeApp() && rcReady
+      ? 'Preview free. Purchase unlocks watermark-free export and all styles (RevenueCat).'
+      : 'Preview everything free. Pro unlocks watermark-free export and all styles.';
+    box.style.display = 'none';
+  }
+  $('paywallModal').classList.add('show');
+}
+
+function hidePaywall() {
+  $('paywallModal').classList.remove('show');
+}
+
+function showOfferModal() {
+  if (offerShownThisSession || isPro) return;
+  offerShownThisSession = true;
+  $('offerModal').classList.add('show');
+}
+
+function hideOfferModal() {
+  $('offerModal').classList.remove('show');
+}
+
+function tryExport(action) {
+  scrollToStage();
+  if (isPro) {
+    runExport(action);
+    return;
+  }
+  if (!needsProToExport()) {
+    runExport(action);
+    return;
+  }
+  pendingExportAction = action;
+  showPaywall({ reason: 'export', features: getActiveProFeatures() });
+}
+
+function runExport(action) {
+  if (action === 'gif') exportGif();
+  else if (action === 'png') exportPng();
+  else if (action === 'share') doShare();
+}
+
+function applyCustomerInfo(customerInfo) {
+  const active = customerInfo && customerInfo.entitlements && customerInfo.entitlements.active;
+  const hasPro = !!(active && active[RC_ENTITLEMENT]);
+  setPro(hasPro);
+  return hasPro;
+}
+
+async function initRevenueCat() {
+  if (!isNativeApp()) {
+    console.info('[RC] Web/browser — using mock Pro (localStorage). Native build uses RevenueCat.');
+    return;
+  }
+  try {
+    // Prefer ES module (works if you later add a bundler); fall back to Capacitor.registerPlugin
+    try {
+      const mod = await import('@revenuecat/purchases-capacitor');
+      Purchases = mod.Purchases;
+    } catch (_) {
+      Purchases = window.Capacitor.registerPlugin('Purchases');
+    }
+    const platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'ios';
+    const apiKey = platform === 'android' ? RC_API_KEYS.android : RC_API_KEYS.ios;
+    if (!apiKey || apiKey.includes('REPLACE')) {
+      console.warn('[RC] API key not set — purchases will fail until you configure RC_API_KEYS');
+    }
+    await Purchases.configure({ apiKey });
+    const infoResult = await Purchases.getCustomerInfo();
+    const customerInfo = infoResult.customerInfo || infoResult;
+    applyCustomerInfo(customerInfo);
+    try {
+      const offerings = await Purchases.getOfferings();
+      rcOfferings = offerings;
+    } catch (e) {
+      console.warn('[RC] getOfferings failed', e);
+    }
+    rcReady = true;
+    console.info('[RC] configured · Pro=', isPro);
+  } catch (err) {
+    console.warn('[RC] init failed, mock fallback', err);
+    rcReady = false;
+  }
+}
+
+/** Purchase via RevenueCat package, or mock on web */
+async function completePurchase(plan) {
+  statusEl.textContent = 'Processing…';
+
+  // Native + RevenueCat ready → real IAP
+  if (isNativeApp() && rcReady && Purchases) {
+    try {
+      const pkgId = RC_PACKAGE_IDS[plan] || RC_PACKAGE_IDS.month;
+      let pkg = null;
+      if (rcOfferings && rcOfferings.current && rcOfferings.current.availablePackages) {
+        pkg = rcOfferings.current.availablePackages.find(p => p.identifier === pkgId)
+          || rcOfferings.current.availablePackages.find(p =>
+              (plan === 'year' && p.packageType === 'ANNUAL') ||
+              (plan === 'month' && p.packageType === 'MONTHLY') ||
+              (plan === 'lifetime' && p.packageType === 'LIFETIME') ||
+              (plan === 'trial' && p.packageType === 'MONTHLY')
+            )
+          || rcOfferings.current.availablePackages[0];
+      }
+      if (!pkg) {
+        // Refresh offerings once
+        const offerings = await Purchases.getOfferings();
+        rcOfferings = offerings;
+        pkg = offerings.current && offerings.current.availablePackages && offerings.current.availablePackages[0];
+      }
+      if (!pkg) throw new Error('No packages available. Check RevenueCat offerings.');
+
+      const result = await Purchases.purchasePackage({ aPackage: pkg });
+      const customerInfo = result.customerInfo || result;
+      const ok = applyCustomerInfo(customerInfo);
+      hidePaywall();
+      hideOfferModal();
+      statusEl.textContent = ok ? 'Pro unlocked' : 'Purchase completed — entitlement pending';
+      if (pendingExportAction) {
+        const a = pendingExportAction;
+        pendingExportAction = null;
+        setTimeout(() => runExport(a), 200);
+      }
+      return;
+    } catch (err) {
+      // User cancelled or store error
+      const msg = (err && (err.message || err.code)) || String(err);
+      if (/cancel/i.test(msg) || err.code === '1' || err.code === 'PURCHASE_CANCELLED') {
+        statusEl.textContent = 'Purchase cancelled';
+      } else {
+        statusEl.textContent = 'Purchase failed: ' + msg;
+        console.error('[RC] purchase', err);
+      }
+      return;
+    }
+  }
+
+  // Web / mock (for UI testing only — not valid for Next Gen Track review)
+  setPro(true);
+  hidePaywall();
+  hideOfferModal();
+  statusEl.textContent = plan === 'offer3'
+    ? '3-day Pro activated (web mock)'
+    : `Pro activated · ${plan} (web mock — use device for real IAP)`;
+  if (pendingExportAction) {
+    const a = pendingExportAction;
+    pendingExportAction = null;
+    setTimeout(() => runExport(a), 200);
+  }
+}
+
+async function restorePurchases() {
+  if (!isNativeApp() || !Purchases) {
+    statusEl.textContent = 'Restore only works in the iOS/Android app';
+    return;
+  }
+  try {
+    const { customerInfo } = await Purchases.restorePurchases();
+    const ok = applyCustomerInfo(customerInfo);
+    statusEl.textContent = ok ? 'Purchases restored · Pro active' : 'No active Pro subscription found';
+    hidePaywall();
+  } catch (err) {
+    statusEl.textContent = 'Restore failed: ' + (err.message || err);
+  }
+}
+
+updateProUI();
+initRevenueCat();
+
+let qr = null, gifFrames = [], subFrames = [], nb = null;
+let modulePx = 18, shape = 'square', shapeMask = null, pendingBuf = null;
+let globalPaletteHSL = null, isPlaying = false, frameIndex = 0, animStart = 0, rafId = null;
+let animSource = 'rocket', ecl = 'Q', borderStyle = 'none';
+let logoImg = null, logoEnabled = false;
+
+const clamp255 = v => v < 0 ? 0 : v > 255 ? 255 : v;
+const lum = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+function boostSat(r, g, b, amount) {
+  const l = lum(r, g, b);
+  return [clamp255(l + (r - l) * amount), clamp255(l + (g - l) * amount), clamp255(l + (b - l) * amount)];
+}
+function brightenPreserve(r, g, b, target) {
+  const l = lum(r, g, b);
+  if (l >= target) return [r, g, b];
+  const f = target / Math.max(l, 1);
+  let nr = r * f, ng = g * f, nb2 = b * f;
+  const mx = Math.max(nr, ng, nb2);
+  if (mx > 255) { const k = 255 / mx; nr *= k; ng *= k; nb2 *= k; }
+  return [clamp255(nr), clamp255(ng), clamp255(nb2)];
+}
+function makeDarkColor(h, s, l, darkTarget) {
+  const bgL = l * 255;
+  let targetL = bgL * 0.60;
+  if (targetL > darkTarget) targetL = darkTarget;
+  const floor = darkTarget * 0.70;
+  if (targetL < floor) targetL = floor;
+  const sUse = Math.min(Math.max(s * 0.70, 0.18), 0.40);
+  let c = hslToRgb(h, sUse, targetL / 255);
+  const realLum = lum(c[0], c[1], c[2]);
+  if (realLum > targetL) {
+    const k = targetL / Math.max(realLum, 1);
+    c = [c[0] * k, c[1] * k, c[2] * k];
+  }
+  return [clamp255(c[0]), clamp255(c[1]), clamp255(c[2])];
+}
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  const d = max - min;
+  if (d !== 0) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+    if (h < 0) h += 1;
+  }
+  return [h, s, l];
+}
+function hue2rgb(p, q, t) {
+  if (t < 0) t += 1; if (t > 1) t -= 1;
+  if (t < 1/6) return p + (q - p) * 6 * t;
+  if (t < 1/2) return q;
+  if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+  return p;
+}
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
+  }
+  return [r * 255, g * 255, b * 255];
+}
+
+function enforceHueCoherence(hsl, s, strength) {
+  if (strength <= 0.001) return hsl;
+  const out = new Float32Array(hsl.length);
+  const w = [1, 2, 1, 2, 4, 2, 1, 2, 1];
+  const BUCKETS = 36, MAX_SHIFT = 0.18;
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      const i = y * s + x;
+      const curH = hsl[i * 3], curS = hsl[i * 3 + 1], curL = hsl[i * 3 + 2];
+      const hist = new Float32Array(BUCKETS);
+      let wi = 0, satSum = 0, satCnt = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++, wi++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= s || ny >= s) continue;
+          const ni = ny * s + nx;
+          const nS = hsl[ni * 3 + 1];
+          satSum += nS; satCnt++;
+          if (nS < 0.06) continue;
+          const nH = hsl[ni * 3];
+          let bkt = (nH * BUCKETS) | 0;
+          if (bkt >= BUCKETS) bkt = BUCKETS - 1;
+          hist[bkt] += w[wi] * nS * nS;
+        }
+      }
+      let bestB = -1, bestW = 0;
+      for (let b = 0; b < BUCKETS; b++) if (hist[b] > bestW) { bestW = hist[b]; bestB = b; }
+      let newH = curH, newS = curS;
+      if (bestB >= 0 && bestW > 0.02) {
+        const targetH = (bestB + 0.5) / BUCKETS;
+        let d = targetH - curH;
+        if (d > 0.5) d -= 1; if (d < -0.5) d += 1;
+        d = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, d));
+        newH = curH + d * strength;
+        if (newH < 0) newH += 1; if (newH >= 1) newH -= 1;
+        if (newS < 0.30) {
+          const avgSat = satCnt ? satSum / satCnt : 0;
+          const targetS = Math.min(0.40, Math.max(0.26, avgSat * 1.15));
+          if (targetS > newS) newS = targetS;
+        }
+      }
+      out[i * 3] = newH; out[i * 3 + 1] = newS; out[i * 3 + 2] = curL;
+    }
+  }
+  return out;
+}
+
+function medianCut(pixels, depth) {
+  if (pixels.length === 0) return [];
+  if (depth <= 0 || pixels.length <= 1) {
+    let r = 0, g = 0, b = 0;
+    for (const p of pixels) { r += p[0]; g += p[1]; b += p[2]; }
+    const n = pixels.length;
+    return [[r / n, g / n, b / n]];
+  }
+  let minR = 255, maxR = 0, minG = 255, maxG = 0, minB = 255, maxB = 0;
+  for (const p of pixels) {
+    if (p[0] < minR) minR = p[0]; if (p[0] > maxR) maxR = p[0];
+    if (p[1] < minG) minG = p[1]; if (p[1] > maxG) maxG = p[1];
+    if (p[2] < minB) minB = p[2]; if (p[2] > maxB) maxB = p[2];
+  }
+  const rr = maxR - minR, gr = maxG - minG, br = maxB - minB;
+  let ch = 0;
+  if (gr >= rr && gr >= br) ch = 1; else if (br >= rr && br >= gr) ch = 2;
+  pixels.sort((a, b) => a[ch] - b[ch]);
+  const mid = pixels.length >> 1;
+  if (mid === 0) {
+    let r = 0, g = 0, b = 0;
+    for (const p of pixels) { r += p[0]; g += p[1]; b += p[2]; }
+    const n = pixels.length;
+    return [[r / n, g / n, b / n]];
+  }
+  return [...medianCut(pixels.slice(0, mid), depth - 1), ...medianCut(pixels.slice(mid), depth - 1)];
+}
+function buildGlobalPalette(frames, depth = 5) {
+  const samples = [];
+  const frameStep = Math.max(1, Math.ceil(frames.length / 30));
+  for (let fi = 0; fi < frames.length; fi += frameStep) {
+    const { width, height, data } = frames[fi].imageData;
+    const total = width * height;
+    const pxStep = Math.max(1, Math.ceil(total / 320));
+    for (let i = 0; i < total; i += pxStep) {
+      const k = i * 4;
+      if (data[k + 3] < 128) continue;
+      samples.push([data[k], data[k + 1], data[k + 2]]);
+    }
+  }
+  if (samples.length === 0) return [];
+  return medianCut(samples, depth);
+}
+function snapToPaletteHue(h, s, l, paletteHSL) {
+  if (!paletteHSL || paletteHSL.length === 0) return [h, s, l];
+  if (s < 0.05) return [h, s, l];
+  let bestH = h, bestScore = Infinity;
+  for (let i = 0; i < paletteHSL.length; i++) {
+    const ph = paletteHSL[i][0], ps = paletteHSL[i][1];
+    if (ps < 0.10) continue;
+    let d = Math.abs(ph - h); if (d > 0.5) d = 1 - d;
+    const score = d * 2 + Math.abs(ps - s) * 0.35;
+    if (score < bestScore) { bestScore = score; bestH = ph; }
+  }
+  return [bestH, s, l];
+}
+
+function buildShapeMask() {
+  const mask = new Uint8Array(SUB * SUB);
+  for (let y = 0; y < SUB; y++) {
+    for (let x = 0; x < SUB; x++) {
+      const cx = x + 0.5, cy = y + 0.5;
+      let inside = 1;
+      if (shape === 'dot') {
+        const dx = cx - SUB / 2, dy = cy - SUB / 2;
+        inside = (dx * dx + dy * dy <= (SUB / 2) * (SUB / 2)) ? 1 : 0;
+      } else if (shape === 'rounded') {
+        const r = SUB * 0.38, hw = SUB / 2 - r;
+        const qx = Math.max(Math.abs(cx - SUB / 2) - hw, 0);
+        const qy = Math.max(Math.abs(cy - SUB / 2) - hw, 0);
+        inside = (qx * qx + qy * qy <= r * r) ? 1 : 0;
+      }
+      mask[y * SUB + x] = inside;
+    }
+  }
+  return mask;
+}
+
+function pathRoundRect(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r);
+  else {
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+}
+function drawBorderDecor(s, mp) {
+  if (borderStyle === 'none') return;
+  const W = canvas.width, H = canvas.height;
+  const pad = getBorderPad() * mp;
+  const ix = pad, iy = pad, iw = W - 2 * pad, ih = H - 2 * pad;
+  const clipInset = mp * 0.35;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.rect(ix + clipInset, iy + clipInset, iw - clipInset * 2, ih - clipInset * 2);
+  ctx.clip('evenodd');
+  switch (borderStyle) {
+    case 'gold': drawGoldFrame(ix, iy, iw, ih, mp); break;
+    case 'floral': drawFloralBorder(ix, iy, iw, ih, mp); break;
+    case 'neon': drawNeonFrame(ix, iy, iw, ih, mp); break;
+    case 'pixel': drawPixelFrame(ix, iy, iw, ih, mp); break;
+    case 'star': drawStarFrame(ix, iy, iw, ih, mp); break;
+    case 'circuit': drawCircuitFrame(ix, iy, iw, ih, mp); break;
+    case 'chinese': drawChineseFrame(ix, iy, iw, ih, mp); break;
+  }
+  ctx.restore();
+}
+
+function drawGoldFrame(ix, iy, iw, ih, mp) {
+  // Solid gold ring filling the pad (clipped to border zone only)
+  const g = ctx.createLinearGradient(ix, iy, ix + iw, iy + ih);
+  g.addColorStop(0, '#f5e6a8');
+  g.addColorStop(0.3, '#c9a227');
+  g.addColorStop(0.5, '#f0d978');
+  g.addColorStop(0.7, '#a67c1a');
+  g.addColorStop(1, '#e8d48b');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, canvas.width, canvas.height); // clip keeps only pad ring
+  // Inner edge highlight
+  ctx.strokeStyle = 'rgba(255,248,220,0.75)';
+  ctx.lineWidth = Math.max(1.2, mp * 0.1);
+  pathRoundRect(ix + mp * 0.12, iy + mp * 0.12, iw - mp * 0.24, ih - mp * 0.24, mp * 0.35);
+  ctx.stroke();
+  // Outer edge
+  ctx.strokeStyle = 'rgba(140,100,20,0.55)';
+  ctx.lineWidth = Math.max(1, mp * 0.08);
+  pathRoundRect(ix - mp * 0.05, iy - mp * 0.05, iw + mp * 0.1, ih + mp * 0.1, mp * 0.45);
+  ctx.stroke();
+  // Corner diamonds
+  const corners = [[ix, iy], [ix + iw, iy], [ix, iy + ih], [ix + iw, iy + ih]];
+  for (const [cx, cy] of corners) {
+    ctx.fillStyle = '#8b6914';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - mp * 0.42);
+    ctx.lineTo(cx + mp * 0.32, cy);
+    ctx.lineTo(cx, cy + mp * 0.42);
+    ctx.lineTo(cx - mp * 0.32, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff8dc';
+    ctx.beginPath();
+    ctx.arc(cx, cy, mp * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawFloralBorder(ix, iy, iw, ih, mp) {
+  // Soft cream-green fill for pad
+  ctx.fillStyle = '#eef6ef';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#3d7a52';
+  ctx.lineWidth = Math.max(1.5, mp * 0.16);
+  ctx.lineCap = 'round';
+  pathRoundRect(ix, iy, iw, ih, mp * 0.7);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(100,180,130,0.4)';
+  ctx.lineWidth = Math.max(1, mp * 0.07);
+  pathRoundRect(ix + mp * 0.3, iy + mp * 0.3, iw - mp * 0.6, ih - mp * 0.6, mp * 0.5);
+  ctx.stroke();
+  const spacing = mp * 2.2;
+  const leaf = mp * 0.36;
+  const fl = mp * 0.48;
+  let k = 0;
+  for (let px = ix + spacing * 0.6; px < ix + iw - spacing * 0.4; px += spacing, k++) {
+    drawLeaf(px, iy + mp * 0.15, leaf, -Math.PI / 2, '#4a9a68');
+    if (k % 2 === 0) drawFlower(px + spacing * 0.4, iy + mp * 0.05, fl, '#e8a0c0');
+  }
+  k = 0;
+  for (let px = ix + spacing * 0.6; px < ix + iw - spacing * 0.4; px += spacing, k++) {
+    drawLeaf(px, iy + ih - mp * 0.15, leaf, Math.PI / 2, '#4a9a68');
+    if (k % 2 === 0) drawFlower(px + spacing * 0.4, iy + ih - mp * 0.05, fl, '#e8a0c0');
+  }
+  k = 0;
+  for (let py = iy + spacing * 0.6; py < iy + ih - spacing * 0.4; py += spacing, k++) {
+    drawLeaf(ix + mp * 0.15, py, leaf, 0, '#4a9a68');
+    if (k % 2 === 0) drawFlower(ix + mp * 0.05, py + spacing * 0.4, fl, '#b8a0d8');
+  }
+  k = 0;
+  for (let py = iy + spacing * 0.6; py < iy + ih - spacing * 0.4; py += spacing, k++) {
+    drawLeaf(ix + iw - mp * 0.15, py, leaf, Math.PI, '#4a9a68');
+    if (k % 2 === 0) drawFlower(ix + iw - mp * 0.05, py + spacing * 0.4, fl, '#b8a0d8');
+  }
+  for (const [cx, cy] of [[ix, iy], [ix + iw, iy], [ix, iy + ih], [ix + iw, iy + ih]]) {
+    drawFlower(cx, cy, mp * 0.55, '#e8c060');
+  }
+}
+function drawLeaf(cx, cy, size, rot, color) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(0, -size, size * 0.48, size, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+function drawFlower(cx, cy, size, color) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let i = 0; i < 5; i++) {
+    const ang = i * Math.PI * 2 / 5 - Math.PI / 2;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(Math.cos(ang) * size * 0.5, Math.sin(ang) * size * 0.5, size * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#fff8e8';
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e8c060';
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawNeonFrame(ix, iy, iw, ih, mp) {
+  // Deep navy fill for the pad ring
+  ctx.fillStyle = '#0a0a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const r = mp * 0.5;
+  const layers = [
+    { c: 'rgba(16,9,246,0.35)', blur: mp * 2.8, lw: mp * 1.6 },
+    { c: 'rgba(80,92,249,0.55)', blur: mp * 1.4, lw: mp * 0.7 },
+    { c: 'rgba(173,211,229,0.95)', blur: mp * 0.5, lw: mp * 0.22 },
+  ];
+  for (const L of layers) {
+    ctx.save();
+    ctx.shadowColor = L.c;
+    ctx.shadowBlur = L.blur;
+    ctx.strokeStyle = L.c;
+    ctx.lineWidth = L.lw;
+    pathRoundRect(ix, iy, iw, ih, r);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = Math.max(1, mp * 0.06);
+  pathRoundRect(ix + mp * 0.25, iy + mp * 0.25, iw - mp * 0.5, ih - mp * 0.5, r * 0.7);
+  ctx.stroke();
+}
+
+function drawPixelFrame(ix, iy, iw, ih, mp) {
+  ctx.fillStyle = '#1a1a22';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const unit = Math.max(3, mp * 0.55);
+  const colors = ['#1009f6', '#505cf9', '#add3e5', '#ffba09', '#e3c7de', '#00e9a7', '#ff3b09'];
+  let ci = 0;
+  // Tile the entire pad with colorful pixels
+  for (let py = 0; py < canvas.height; py += unit) {
+    for (let px = 0; px < canvas.width; px += unit) {
+      // only pad is visible due to clip
+      const jitter = ((Math.sin(px * 0.11 + py * 0.07) + 1) * 0.15);
+      ctx.fillStyle = colors[ci++ % colors.length];
+      ctx.globalAlpha = 0.75 + jitter;
+      ctx.fillRect(px, py, unit - 1, unit - 1);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawStarFrame(ix, iy, iw, ih, mp) {
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, '#15123a');
+  grad.addColorStop(0.5, '#0a0818');
+  grad.addColorStop(1, '#15123a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = 'rgba(120,130,255,0.5)';
+  ctx.lineWidth = Math.max(1, mp * 0.1);
+  pathRoundRect(ix + mp * 0.1, iy + mp * 0.1, iw - mp * 0.2, ih - mp * 0.2, mp * 0.4);
+  ctx.stroke();
+  let seed = 42424;
+  const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const starColors = ['#fef3c7', '#ffba09', '#e3c7de', '#ffffff', '#add3e5'];
+  for (let i = 0; i < 56; i++) {
+    const sx = rand() * canvas.width, sy = rand() * canvas.height;
+    const r2 = mp * (0.06 + rand() * 0.16);
+    ctx.fillStyle = starColors[(rand() * starColors.length) | 0];
+    ctx.globalAlpha = 0.5 + rand() * 0.5;
+    drawSmallStar(sx, sy, r2, 5);
+    ctx.globalAlpha = 1;
+  }
+  drawCrescentMoon(ix + mp * 0.3, iy + mp * 0.3, mp * 0.7, '#ffba09');
+  drawCrescentMoon(ix + iw - mp * 0.3, iy + ih - mp * 0.3, mp * 0.7, '#ffba09');
+}
+function drawSmallStar(cx, cy, r, points) {
+  const innerR = r * 0.4;
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const rad = (i % 2 === 0) ? r : innerR;
+    const ang = (i * Math.PI / points) - Math.PI / 2;
+    const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+function drawCrescentMoon(cx, cy, r, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.arc(cx + r * 0.5, cy - r * 0.12, r * 0.82, 0, Math.PI * 2);
+  ctx.fill('evenodd');
+  ctx.restore();
+}
+
+function drawCircuitFrame(ix, iy, iw, ih, mp) {
+  ctx.fillStyle = '#061a15';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#00c98a';
+  ctx.lineWidth = Math.max(1.2, mp * 0.12);
+  pathRoundRect(ix, iy, iw, ih, mp * 0.25);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,201,138,0.35)';
+  ctx.lineWidth = Math.max(1, mp * 0.06);
+  ctx.setLineDash([mp * 0.4, mp * 0.25]);
+  pathRoundRect(ix + mp * 0.25, iy + mp * 0.25, iw - mp * 0.5, ih - mp * 0.5, mp * 0.15);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = 'rgba(0,201,138,0.7)';
+  ctx.lineWidth = Math.max(1, mp * 0.07);
+  ctx.lineCap = 'round';
+  // Horizontal traces top/bottom of pad
+  const midY1 = ix > 0 ? (iy + getBorderPad() * mp * 0.5) : iy;
+  ctx.beginPath();
+  for (let px = 0; px < canvas.width; px += mp * 0.35) {
+    const py = mp * 0.55 + Math.sin(px * 0.28) * mp * 0.12;
+    if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  for (let px = 0; px < canvas.width; px += mp * 0.35) {
+    const py = canvas.height - mp * 0.55 + Math.sin(px * 0.28 + 1) * mp * 0.12;
+    if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#00c98a';
+  for (let px = mp; px < canvas.width - mp; px += mp * 1.6) {
+    ctx.beginPath(); ctx.arc(px, mp * 0.55, mp * 0.12, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px, canvas.height - mp * 0.55, mp * 0.12, 0, Math.PI * 2); ctx.fill();
+  }
+  const chip = mp * 0.85;
+  for (const [cx, cy] of [[ix, iy], [ix + iw, iy], [ix, iy + ih], [ix + iw, iy + ih]]) {
+    ctx.fillStyle = '#0d2e28';
+    ctx.fillRect(cx - chip / 2, cy - chip / 2, chip, chip);
+    ctx.strokeStyle = '#00c98a';
+    ctx.lineWidth = Math.max(1, mp * 0.07);
+    ctx.strokeRect(cx - chip / 2, cy - chip / 2, chip, chip);
+    ctx.fillStyle = '#00c98a';
+    ctx.fillRect(cx - chip * 0.18, cy - chip * 0.18, chip * 0.36, chip * 0.36);
+  }
+}
+
+function drawChineseFrame(ix, iy, iw, ih, mp) {
+  const red = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  red.addColorStop(0, '#7a1a1a');
+  red.addColorStop(0.5, '#9b2525');
+  red.addColorStop(1, '#7a1a1a');
+  ctx.fillStyle = red;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = Math.max(1.5, mp * 0.16);
+  pathRoundRect(ix, iy, iw, ih, mp * 0.2);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,230,150,0.4)';
+  ctx.lineWidth = Math.max(1, mp * 0.06);
+  pathRoundRect(ix + mp * 0.28, iy + mp * 0.28, iw - mp * 0.56, ih - mp * 0.56, mp * 0.12);
+  ctx.stroke();
+  const unit = mp * 0.9;
+  ctx.strokeStyle = '#d4af37';
+  ctx.lineWidth = Math.max(1, mp * 0.07);
+  ctx.lineCap = 'square';
+  for (let px = ix + mp * 0.8; px < ix + iw - mp * 0.8 - unit; px += unit) {
+    drawMeander(px, iy + mp * 0.15, mp * 0.38, 'h');
+    drawMeander(px, iy + ih - mp * 0.15, mp * 0.38, 'h');
+  }
+  for (let py = iy + mp * 0.8; py < iy + ih - mp * 0.8 - unit; py += unit) {
+    drawMeander(ix + mp * 0.15, py, mp * 0.38, 'v');
+    drawMeander(ix + iw - mp * 0.15, py, mp * 0.38, 'v');
+  }
+  for (const [cx, cy] of [[ix, iy], [ix + iw, iy], [ix, iy + ih], [ix + iw, iy + ih]]) {
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(cx - mp * 0.35, cy - mp * 0.35, mp * 0.7, mp * 0.7);
+    ctx.fillStyle = '#7a1a1a';
+    ctx.fillRect(cx - mp * 0.16, cy - mp * 0.16, mp * 0.32, mp * 0.32);
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(cx - mp * 0.07, cy - mp * 0.07, mp * 0.14, mp * 0.14);
+  }
+}
+function drawMeander(px, py, size, dir) {
+  ctx.beginPath();
+  if (dir === 'h') {
+    ctx.moveTo(px, py); ctx.lineTo(px + size, py); ctx.lineTo(px + size, py + size);
+    ctx.lineTo(px + size * 0.3, py + size); ctx.lineTo(px + size * 0.3, py + size * 0.4); ctx.lineTo(px + size * 0.7, py + size * 0.4);
+  } else {
+    ctx.moveTo(px, py); ctx.lineTo(px, py + size); ctx.lineTo(px + size, py + size);
+    ctx.lineTo(px + size, py + size * 0.3); ctx.lineTo(px + size * 0.4, py + size * 0.3); ctx.lineTo(px + size * 0.4, py + size * 0.7);
+  }
+  ctx.stroke();
+}
+
+/* ========== Presets ========== */
+const PRESET_SIZE = 400;
+function makeFrameCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function drawPresetInBaseSpace(size, drawFn) {
+  const c = makeFrameCanvas(size, size);
+  const g = c.getContext('2d');
+  const base = 220, u = size / base;
+  g.save(); g.scale(u, u); drawFn(g, base); g.restore();
+  return g.getImageData(0, 0, size, size);
+}
+function generateRocketFrames(count = 28, size = PRESET_SIZE) {
+  const frames = [];
+  for (let i = 0; i < count; i++) {
+    const t = i / count;
+    const imgData = drawPresetInBaseSpace(size, (g, S) => {
+      g.clearRect(0, 0, S, S);
+      const sky = g.createLinearGradient(0, 0, 0, S);
+      sky.addColorStop(0, '#030712'); sky.addColorStop(1, '#1a1540');
+      g.fillStyle = sky; g.fillRect(0, 0, S, S);
+      g.fillStyle = '#ffffff';
+      for (let s = 0; s < 25; s++) {
+        const sx = (s * 47 + 13) % S, sy = (s * 31 + 7) % (S * 0.75);
+        g.globalAlpha = 0.2 + ((s * 19) % 60) / 100; g.fillRect(sx, sy, 1.2, 1.2);
+      }
+      g.globalAlpha = 1;
+      const rocketY = S * 0.72 - t * S * 0.85, cx = S * 0.5;
+      const flameH = 32 + Math.sin(t * 22) * 8 + t * 15;
+      const flameGrad = g.createLinearGradient(cx, rocketY + 48, cx, rocketY + 48 + flameH);
+      flameGrad.addColorStop(0, '#ffffff'); flameGrad.addColorStop(0.2, '#ffba09');
+      flameGrad.addColorStop(0.6, '#ff3b09'); flameGrad.addColorStop(1, 'rgba(255,59,9,0)');
+      g.fillStyle = flameGrad;
+      g.beginPath(); g.moveTo(cx - 9, rocketY + 48);
+      g.quadraticCurveTo(cx - 16, rocketY + 48 + flameH * 0.5, cx, rocketY + 48 + flameH);
+      g.quadraticCurveTo(cx + 16, rocketY + 48 + flameH * 0.5, cx + 9, rocketY + 48); g.fill();
+      g.fillStyle = '#f8fafc';
+      g.beginPath(); g.moveTo(cx, rocketY); g.lineTo(cx + 13, rocketY + 16); g.lineTo(cx + 13, rocketY + 48);
+      g.lineTo(cx - 13, rocketY + 48); g.lineTo(cx - 13, rocketY + 16); g.closePath(); g.fill();
+      g.fillStyle = '#ff3b09';
+      g.beginPath(); g.moveTo(cx, rocketY - 9); g.lineTo(cx + 13, rocketY + 16); g.lineTo(cx - 13, rocketY + 16); g.closePath(); g.fill();
+      g.fillStyle = '#1009f6'; g.beginPath(); g.arc(cx, rocketY + 27, 4.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#c43d2a';
+      g.beginPath(); g.moveTo(cx - 13, rocketY + 36); g.lineTo(cx - 24, rocketY + 50); g.lineTo(cx - 13, rocketY + 46); g.fill();
+      g.beginPath(); g.moveTo(cx + 13, rocketY + 36); g.lineTo(cx + 24, rocketY + 50); g.lineTo(cx + 13, rocketY + 46); g.fill();
+    });
+    frames.push({ delay: 45, imageData: imgData });
+  }
+  return frames;
+}
+function generateCarFrames(count = 24, size = PRESET_SIZE) {
+  const frames = [];
+  for (let i = 0; i < count; i++) {
+    const t = i / count;
+    const imgData = drawPresetInBaseSpace(size, (g, S) => {
+      g.clearRect(0, 0, S, S);
+      const sky = g.createLinearGradient(0, 0, 0, S * 0.62);
+      sky.addColorStop(0, '#add3e5'); sky.addColorStop(1, '#f0f0ec');
+      g.fillStyle = sky; g.fillRect(0, 0, S, S * 0.62);
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      const cloudOffset = (t * S * 0.6) % (S + 80) - 40;
+      const cx1 = (cloudOffset + 30) % (S + 80) - 40;
+      g.beginPath(); g.arc(cx1, S * 0.22, 12, 0, Math.PI * 2); g.arc(cx1 + 10, S * 0.20, 10, 0, Math.PI * 2); g.arc(cx1 + 20, S * 0.22, 9, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#6d6868';
+      g.beginPath(); g.moveTo(0, S * 0.56); g.quadraticCurveTo(S * 0.28, S * 0.44, S * 0.52, S * 0.54);
+      g.quadraticCurveTo(S * 0.78, S * 0.40, S, S * 0.53); g.lineTo(S, S * 0.62); g.lineTo(0, S * 0.62); g.fill();
+      g.fillStyle = '#1a1a1a'; g.fillRect(0, S * 0.62, S, S * 0.38);
+      g.fillStyle = '#4d4d4d'; g.fillRect(0, S * 0.62, S, 3);
+      const dashOff = (t * S * 1.8) % 40;
+      g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.setLineDash([16, 14]); g.lineDashOffset = -dashOff;
+      g.beginPath(); g.moveTo(0, S * 0.78); g.lineTo(S, S * 0.78); g.stroke(); g.setLineDash([]);
+      const carX = -50 + t * (S + 100), carY = S * 0.67;
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.ellipse(carX + 27, carY + 26, 26, 4, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffba09'; g.beginPath(); g.roundRect(carX, carY, 54, 22, 6); g.fill();
+      g.fillStyle = '#1a1a1a'; g.beginPath(); g.roundRect(carX + 11, carY - 13, 30, 15, 4); g.fill();
+      g.fillStyle = '#f0f0ec'; g.fillRect(carX + 14, carY - 10, 10, 9); g.fillRect(carX + 27, carY - 10, 11, 9);
+      g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc(carX + 13, carY + 22, 6.5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(carX + 41, carY + 22, 6.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#d4d4d0'; g.beginPath(); g.arc(carX + 13, carY + 22, 2.5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(carX + 41, carY + 22, 2.5, 0, Math.PI * 2); g.fill();
+    });
+    frames.push({ delay: 50, imageData: imgData });
+  }
+  return frames;
+}
+function generateFlameFrames(count = 20, size = PRESET_SIZE) {
+  const frames = [];
+  const seeds = Array.from({ length: 14 }, (_, k) => ({
+    x: 0.42 + (k % 4) * 0.05, phase: k * 1.3, speed: 1.1 + (k % 3) * 0.4, w: 0.04 + (k % 3) * 0.02,
+  }));
+  for (let i = 0; i < count; i++) {
+    const t = i / count;
+    const imgData = drawPresetInBaseSpace(size, (g, S) => {
+      g.clearRect(0, 0, S, S);
+      const bg = g.createRadialGradient(S / 2, S * 0.65, 10, S / 2, S * 0.5, S * 0.75);
+      bg.addColorStop(0, '#2a1810'); bg.addColorStop(0.5, '#140e0a'); bg.addColorStop(1, '#080505');
+      g.fillStyle = bg; g.fillRect(0, 0, S, S);
+      const layers = [
+        { color0: '#ffffff', color1: '#ffba09', color2: 'rgba(255,186,9,0)', h: 0.62, w: 0.12 },
+        { color0: '#ffba09', color1: '#ff3b09', color2: 'rgba(255,59,9,0)', h: 0.52, w: 0.18 },
+        { color0: '#ff6b3b', color1: '#c43d2a', color2: 'rgba(107,21,21,0)', h: 0.42, w: 0.25 },
+      ];
+      for (const L of layers) {
+        for (let k = 0; k < seeds.length; k++) {
+          const s = seeds[k];
+          const wobble = Math.sin(t * Math.PI * 2 * s.speed + s.phase) * 0.025;
+          const cx = S * (s.x + wobble), baseY = S * 0.85;
+          const topY = baseY - S * L.h * (0.8 + 0.2 * Math.sin(t * 14 + s.phase));
+          const halfW = S * L.w * s.w * 8;
+          const grad = g.createLinearGradient(cx, baseY, cx, topY);
+          grad.addColorStop(0, L.color0); grad.addColorStop(0.4, L.color1); grad.addColorStop(1, L.color2);
+          g.fillStyle = grad;
+          g.beginPath(); g.moveTo(cx - halfW, baseY);
+          g.quadraticCurveTo(cx - halfW * 1.5, (baseY + topY) * 0.5, cx + Math.sin(t * 12 + s.phase) * 3, topY);
+          g.quadraticCurveTo(cx + halfW * 1.5, (baseY + topY) * 0.5, cx + halfW, baseY); g.closePath(); g.fill();
+        }
+      }
+      g.fillStyle = '#ffba09';
+      for (let p = 0; p < 10; p++) {
+        const pt = (t + p * 0.09) % 1;
+        const px = S * 0.5 + Math.sin(pt * 10 + p) * 15, py = S * 0.82 - pt * S * 0.55;
+        g.globalAlpha = 0.8 * (1 - pt); g.beginPath(); g.arc(px, py, 1 + (1 - pt) * 1.2, 0, Math.PI * 2); g.fill();
+      }
+      g.globalAlpha = 1;
+    });
+    frames.push({ delay: 55, imageData: imgData });
+  }
+  return frames;
+}
+
+/* GIF decoder */
+function lzwDecodeGif(data, minCodeSize, pixelCount) {
+  const clearCode = 1 << minCodeSize, eoiCode = clearCode + 1;
+  let codeSize = minCodeSize + 1, nextCode = eoiCode + 1;
+  let dict = [];
+  const resetDict = () => {
+    dict = new Array(4096);
+    for (let i = 0; i < clearCode; i++) dict[i] = [i];
+    dict[clearCode] = null; dict[eoiCode] = null;
+    codeSize = minCodeSize + 1; nextCode = eoiCode + 1;
+  };
+  resetDict();
+  const output = new Uint8Array(pixelCount); let outIdx = 0, bitPos = 0;
+  const totalBits = data.length * 8; let prev = null;
+  const readCode = () => {
+    if (bitPos + codeSize > totalBits) return -1;
+    let code = 0, bp = bitPos;
+    for (let i = 0; i < codeSize; i++) {
+      if (data[bp >> 3] & (1 << (bp & 7))) code |= (1 << i); bp++;
+    }
+    bitPos += codeSize; return code;
+  };
+  while (outIdx < pixelCount) {
+    const code = readCode();
+    if (code === -1 || code === eoiCode) break;
+    if (code === clearCode) { resetDict(); prev = null; continue; }
+    let entry;
+    if (code < nextCode && dict[code] != null) entry = dict[code];
+    else if (prev !== null) entry = prev.concat([prev[0]]);
+    else break;
+    for (let i = 0; i < entry.length && outIdx < pixelCount; i++) output[outIdx++] = entry[i];
+    if (prev !== null && nextCode < 4096) {
+      dict[nextCode] = prev.concat([entry[0]]); nextCode++;
+      if (nextCode === (1 << codeSize) && codeSize < 12) codeSize++;
+    }
+    prev = entry;
+  }
+  return output;
+}
+function deinterlaceGif(indices, w, h) {
+  const out = new Uint8Array(indices.length);
+  const offsets = [0, 4, 2, 1], steps = [8, 8, 4, 2]; let srcIdx = 0;
+  for (let pass = 0; pass < 4; pass++) {
+    for (let y = offsets[pass]; y < h; y += steps[pass]) {
+      for (let x = 0; x < w; x++) out[y * w + x] = indices[srcIdx++];
+    }
+  }
+  return out;
+}
+function composeGifFrames(gif) {
+  const { width, height, frames } = gif;
+  const full = new Uint8ClampedArray(width * height * 4);
+  const result = []; let prevDisposal = 0, prevRegion = null, prevBackup = null;
+  for (let i = 0; i < frames.length; i++) {
+    const f = frames[i];
+    if (i > 0) {
+      if (prevDisposal === 2 && prevRegion) {
+        const { left, top, width: pw, height: ph } = prevRegion;
+        for (let y = 0; y < ph; y++) {
+          const rowStart = (top + y) * width + left;
+          for (let x = 0; x < pw; x++) {
+            const p = (rowStart + x) * 4;
+            full[p] = 0; full[p+1] = 0; full[p+2] = 0; full[p+3] = 0;
+          }
+        }
+      } else if (prevDisposal === 3 && prevBackup) full.set(prevBackup);
+    }
+    if (f.disposal === 3) prevBackup = new Uint8ClampedArray(full);
+    const { left, top, width: fw, height: fh, colorTable, indices, transparentIndex } = f;
+    for (let y = 0; y < fh; y++) {
+      const fRowStart = y * fw, fullRowStart = (top + y) * width + left;
+      for (let x = 0; x < fw; x++) {
+        const idx = indices[fRowStart + x];
+        if (idx === transparentIndex) continue;
+        const p = (fullRowStart + x) * 4, ci = idx * 3;
+        full[p] = colorTable[ci]; full[p+1] = colorTable[ci+1]; full[p+2] = colorTable[ci+2]; full[p+3] = 255;
+      }
+    }
+    result.push({ delay: Math.max(f.delay || 100, 20), imageData: new ImageData(new Uint8ClampedArray(full), width, height) });
+    prevDisposal = f.disposal; prevRegion = { left, top, width: fw, height: fh };
+  }
+  return result;
+}
+function parseWithInlineDecoder(buffer) {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length < 13) throw new Error('GIF file too short or corrupted');
+  if (String.fromCharCode(bytes[0], bytes[1], bytes[2]) !== 'GIF') throw new Error('Not a valid GIF file');
+  let pos = 6;
+  const width = bytes[pos] | (bytes[pos+1] << 8); pos += 2;
+  const height = bytes[pos] | (bytes[pos+1] << 8); pos += 2;
+  const packed = bytes[pos++]; pos += 2;
+  const hasGCT = !!(packed & 0x80), gctSize = 2 << (packed & 0x07);
+  let globalColorTable = null;
+  if (hasGCT) { globalColorTable = bytes.subarray(pos, pos + gctSize * 3); pos += gctSize * 3; }
+  const frames = []; let delay = 100, transparentIndex = -1, disposal = 0;
+  while (pos < bytes.length) {
+    const marker = bytes[pos++];
+    if (marker === 0x3B) break;
+    if (marker === 0x21) {
+      const extType = bytes[pos++];
+      if (extType === 0xF9) {
+        pos++; const flags = bytes[pos++];
+        delay = (bytes[pos] | (bytes[pos+1] << 8)) * 10; pos += 2;
+        const tIdx = bytes[pos++]; transparentIndex = (flags & 0x01) ? tIdx : -1;
+        disposal = (flags >> 2) & 0x07; pos++;
+      } else {
+        while (pos < bytes.length) { const subSize = bytes[pos++]; if (subSize === 0) break; pos += subSize; }
+      }
+    } else if (marker === 0x2C) {
+      const left = bytes[pos] | (bytes[pos+1] << 8); pos += 2;
+      const top = bytes[pos] | (bytes[pos+1] << 8); pos += 2;
+      const fw = bytes[pos] | (bytes[pos+1] << 8); pos += 2;
+      const fh = bytes[pos] | (bytes[pos+1] << 8); pos += 2;
+      const iflags = bytes[pos++];
+      const hasLCT = !!(iflags & 0x80), interlace = !!(iflags & 0x40), lctSize = 2 << (iflags & 0x07);
+      let colorTable = globalColorTable;
+      if (hasLCT) { colorTable = bytes.subarray(pos, pos + lctSize * 3); pos += lctSize * 3; }
+      const lzwMinCodeSize = bytes[pos++];
+      const chunks = []; let totalLen = 0;
+      while (pos < bytes.length) {
+        const subSize = bytes[pos++]; if (subSize === 0) break;
+        chunks.push(bytes.subarray(pos, pos + subSize)); totalLen += subSize; pos += subSize;
+      }
+      const lzwData = new Uint8Array(totalLen); let off = 0;
+      for (const c of chunks) { lzwData.set(c, off); off += c.length; }
+      let indices = lzwDecodeGif(lzwData, lzwMinCodeSize, fw * fh);
+      if (interlace) indices = deinterlaceGif(indices, fw, fh);
+      frames.push({ left, top, width: fw, height: fh, colorTable, indices, transparentIndex, delay, disposal });
+    } else break;
+  }
+  if (frames.length === 0) throw new Error('No usable image frames in GIF');
+  return composeGifFrames({ width, height, frames });
+}
+async function parseGifToFullFrames(buffer) {
+  if (typeof ImageDecoder !== 'undefined') {
+    try {
+      const decoder = new ImageDecoder({ data: buffer, type: 'image/gif' });
+      await decoder.completed;
+      const track = decoder.tracks.selectedTrack;
+      if (track && track.frameCount) {
+        const result = [], w = track.codedWidth, h = track.codedHeight;
+        const tmpC = document.createElement('canvas'); tmpC.width = w; tmpC.height = h;
+        const tctx = tmpC.getContext('2d', { willReadFrequently: true });
+        for (let i = 0; i < track.frameCount; i++) {
+          const { image } = await decoder.decode({ frameIndex: i });
+          tctx.clearRect(0, 0, w, h); tctx.drawImage(image, 0, 0);
+          result.push({ delay: Math.max((image.duration || 100000) / 1000, 20), imageData: tctx.getImageData(0, 0, w, h) });
+          image.close();
+        }
+        decoder.close();
+        if (result.length > 0) return result;
+      }
+    } catch (e) { console.warn('[GIF] fallback:', e.message || e); }
+  }
+  return parseWithInlineDecoder(buffer);
+}
+
+function buildTopology() {
+  const s = qr.modules.size, d = qr.modules.data;
+  nb = new Uint8Array(s * s);
+  const at = (x, y) => (x < 0 || y < 0 || x >= s || y >= s) ? -1 : d[y * s + x];
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      const i = y * s + x, self = d[i]; let m = 0;
+      if (at(x, y - 1) === self) m |= 1;
+      if (at(x + 1, y) === self) m |= 2;
+      if (at(x, y + 1) === self) m |= 4;
+      if (at(x - 1, y) === self) m |= 8;
+      if (at(x - 1, y - 1) === self) m |= 16;
+      if (at(x + 1, y - 1) === self) m |= 32;
+      if (at(x + 1, y + 1) === self) m |= 64;
+      if (at(x - 1, y + 1) === self) m |= 128;
+      nb[i] = m;
+    }
+  }
+}
+function rebuildPalette() {
+  if (!$('paletteSnap').checked || !gifFrames.length) { globalPaletteHSL = null; return; }
+  const pal = buildGlobalPalette(gifFrames, 5);
+  globalPaletteHSL = pal.map(c => rgbToHsl(c[0], c[1], c[2]));
+}
+function buildSubFrames() {
+  if (!qr || !gifFrames.length) return;
+  const s = qr.modules.size, subS = s * SUB, d = qr.modules.data;
+  const darkTarget = +$('darkLum').value, lightTarget = +$('lightLum').value;
+  const vivid = +$('vivid').value / 10, useColorLight = $('colorLight').checked;
+  const grayGuard = $('grayGuard').checked, coherence = +$('coherence').value / 100;
+  const soften = +$('soften').value / 100, detailGain = +$('detail').value / 100;
+  const gw = gifFrames[0].imageData.width, gh = gifFrames[0].imageData.height;
+  const srcC = document.createElement('canvas'); srcC.width = gw; srcC.height = gh;
+  const sctx = srcC.getContext('2d', { willReadFrequently: true });
+  const animC = document.createElement('canvas'); animC.width = subS; animC.height = subS;
+  const actx = animC.getContext('2d', { willReadFrequently: true });
+  actx.imageSmoothingEnabled = true; actx.imageSmoothingQuality = 'high';
+  const scale = Math.max(subS / gw, subS / gh), dw = gw * scale, dh = gh * scale;
+  const dx = (subS - dw) / 2, dy = (subS - dh) / 2, blurPx = soften * SUB * 1.2;
+  const memH = new Float32Array(s * s).fill(-1), memS = new Float32Array(s * s), memLife = new Uint8Array(s * s);
+  const FRAME_GRAY_ENTER = 0.055, FRAME_COLOR_ENTER = 0.10, MODULE_MEM_STORE = 0.25;
+  const MODULE_DARK_GRAY = 0.12, MIN_KEEP_SAT = 0.45, MEM_TTL = 12;
+  const maxDev = Math.max(16, (lightTarget - darkTarget) * 0.25);
+  subFrames = [];
+  for (const f of gifFrames) {
+    sctx.putImageData(f.imageData, 0, 0);
+    actx.fillStyle = '#ffffff'; actx.fillRect(0, 0, subS, subS);
+    if (blurPx > 0.01) actx.filter = `blur(${blurPx.toFixed(2)}px)`;
+    actx.drawImage(srcC, dx, dy, dw, dh); actx.filter = 'none';
+    const px = actx.getImageData(0, 0, subS, subS).data;
+    const hsl = new Float32Array(s * s * 3), meanLumArr = new Float32Array(s * s);
+    let satSum = 0, satCount = 0;
+    for (let my = 0; my < s; my++) {
+      for (let mx = 0; mx < s; mx++) {
+        let sr = 0, sg = 0, sb = 0, sl = 0;
+        const rowBase = my * SUB, colBase = mx * SUB;
+        for (let sy = 0; sy < SUB; sy++) {
+          const base = ((rowBase + sy) * subS + colBase) * 4;
+          for (let sx = 0; sx < SUB; sx++) {
+            const k = base + sx * 4; sr += px[k]; sg += px[k+1]; sb += px[k+2]; sl += lum(px[k], px[k+1], px[k+2]);
+          }
+        }
+        const n = SUB * SUB; let r = sr / n, g = sg / n, b = sb / n;
+        if (vivid !== 1) { const c = boostSat(r, g, b, vivid); r = c[0]; g = c[1]; b = c[2]; }
+        const i = my * s + mx, hslv = rgbToHsl(r, g, b);
+        hsl[i*3] = hslv[0]; hsl[i*3+1] = hslv[1]; hsl[i*3+2] = hslv[2]; meanLumArr[i] = sl / n;
+        if (d[i]) { satSum += hslv[1]; satCount++; }
+      }
+    }
+    let hsl2 = enforceHueCoherence(hsl, s, coherence);
+    if (globalPaletteHSL && globalPaletteHSL.length) {
+      for (let i = 0; i < s * s; i++) {
+        const o = i * 3;
+        const r2 = snapToPaletteHue(hsl2[o], hsl2[o+1], hsl2[o+2], globalPaletteHSL);
+        hsl2[o] = r2[0]; hsl2[o+1] = r2[1]; hsl2[o+2] = r2[2];
+      }
+    }
+    const avgSat = satCount ? satSum / satCount : 0;
+    if (grayGuard && avgSat > FRAME_COLOR_ENTER) {
+      for (let i = 0; i < s * s; i++) {
+        if (!d[i]) continue;
+        const sat = hsl2[i*3+1];
+        if (sat > MODULE_MEM_STORE) { memH[i] = hsl2[i*3]; memS[i] = sat; memLife[i] = MEM_TTL; }
+        else if (memLife[i] > 0) { memLife[i]--; if (memLife[i] === 0) memH[i] = -1; }
+      }
+    }
+    if (grayGuard && avgSat < FRAME_GRAY_ENTER) {
+      for (let i = 0; i < s * s; i++) {
+        if (!d[i]) continue;
+        const sat = hsl2[i*3+1];
+        if (sat < MODULE_DARK_GRAY && memH[i] >= 0 && memS[i] > MODULE_MEM_STORE) {
+          hsl2[i*3] = memH[i]; hsl2[i*3+1] = Math.max(memS[i], MIN_KEEP_SAT);
+        }
+      }
+    }
+    const out = new Uint8ClampedArray(subS * subS * 3);
+    for (let my = 0; my < s; my++) {
+      for (let mx = 0; mx < s; mx++) {
+        const i = my * s + mx, o = i * 3;
+        const h = hsl2[o], sat = hsl2[o+1], la = hsl2[o+2];
+        let baseR, baseG, baseB;
+        if (d[i]) {
+          const c = makeDarkColor(h, sat, la, darkTarget); baseR = c[0]; baseG = c[1]; baseB = c[2];
+        } else if (useColorLight) {
+          const c2 = hslToRgb(h, sat, la); const c = brightenPreserve(c2[0], c2[1], c2[2], lightTarget);
+          baseR = c[0]; baseG = c[1]; baseB = c[2];
+        } else { baseR = 255; baseG = 255; baseB = 255; }
+        const baseLum = lum(baseR, baseG, baseB), meanLum = meanLumArr[i];
+        const rowBase = my * SUB, colBase = mx * SUB;
+        for (let sy = 0; sy < SUB; sy++) {
+          const srcRow = ((rowBase + sy) * subS + colBase) * 4, dstRow = ((rowBase + sy) * subS + colBase) * 3;
+          for (let sx = 0; sx < SUB; sx++) {
+            const sk = srcRow + sx * 4, dk = dstRow + sx * 3;
+            const subLum = lum(px[sk], px[sk+1], px[sk+2]);
+            let delta = (subLum - meanLum) * detailGain;
+            if (delta > maxDev) delta = maxDev; if (delta < -maxDev) delta = -maxDev;
+            let outL = baseLum + delta; if (outL < 0) outL = 0; if (outL > 255) outL = 255;
+            const k = outL / Math.max(baseLum, 8);
+            let r = baseR * k, g = baseG * k, b = baseB * k;
+            if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+            out[dk] = r; out[dk+1] = g; out[dk+2] = b;
+          }
+        }
+      }
+    }
+    subFrames.push(out);
+  }
+}
+
+function setupCanvas() {
+  if (!qr) return;
+  modulePx = Math.max(SUB, Math.round(modulePx / SUB) * SUB);
+  $('moduleSize').value = modulePx; $('moduleSizeVal').textContent = modulePx;
+  const bp = getBorderPad();
+  const totalModules = qr.modules.size + MARGIN * 2 + bp * 2;
+  canvas.width = totalModules * modulePx; canvas.height = totalModules * modulePx;
+}
+
+let subCanvas = null, subCtx = null, subImageData = null;
+function drawFrame(idx) {
+  if (!qr || !subFrames.length) return;
+  const s = qr.modules.size, subS = s * SUB, mp = modulePx;
+  const bp = getBorderPad();
+  const expected = (s + MARGIN * 2 + bp * 2) * mp;
+  if (canvas.width !== expected || canvas.height !== expected) {
+    canvas.width = expected;
+    canvas.height = expected;
+  }
+  const qrOff = (bp + MARGIN) * mp;
+  if (!subCanvas) { subCanvas = document.createElement('canvas'); subCtx = subCanvas.getContext('2d'); }
+  if (subCanvas.width !== subS) {
+    subCanvas.width = subCanvas.height = subS;
+    subImageData = subCtx.createImageData(subS, subS);
+  }
+  const dst = subImageData.data, src = subFrames[Math.min(idx, subFrames.length - 1)];
+  const tiledRows = [];
+  for (let sy = 0; sy < SUB; sy++) {
+    const row = new Uint8Array(subS);
+    for (let x = 0; x < subS; x++) row[x] = shapeMask[sy * SUB + (x % SUB)];
+    tiledRows.push(row);
+  }
+  for (let y = 0; y < subS; y++) {
+    const maskRow = tiledRows[y % SUB], srcRow = y * subS * 3; let k = y * subS * 4;
+    for (let x = 0; x < subS; x++, k += 4) {
+      const j = srcRow + x * 3;
+      if (maskRow[x]) { dst[k] = src[j]; dst[k+1] = src[j+1]; dst[k+2] = src[j+2]; }
+      else { dst[k] = 255; dst[k+1] = 255; dst[k+2] = 255; }
+      dst[k+3] = 255;
+    }
+  }
+  subCtx.putImageData(subImageData, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const showWhite = $('showWhiteFrame').checked;
+  const innerX = bp * mp, innerY = bp * mp;
+  const innerW = canvas.width - 2 * bp * mp, innerH = canvas.height - 2 * bp * mp;
+  // QR quiet-zone + modules always sit on opaque white (required for scanning)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(innerX, innerY, innerW, innerH);
+  // Outer ring beyond decorative border — only when user opts in
+  if (showWhite && bp > 0) {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height);
+    ctx.rect(innerX, innerY, innerW, innerH);
+    ctx.fill('evenodd');
+  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(subCanvas, 0, 0, subS, subS, qrOff, qrOff, s * mp, s * mp);
+  drawFinder(qrOff, qrOff);
+  drawFinder(qrOff + (s - 7) * mp, qrOff);
+  drawFinder(qrOff, qrOff + (s - 7) * mp);
+  if (logoEnabled && logoImg && logoImg.complete) {
+    const logoSize = Math.min(s * mp * 0.22, 72);
+    const lx = qrOff + (s * mp - logoSize) / 2;
+    const ly = qrOff + (s * mp - logoSize) / 2;
+    const pad = logoSize * 0.12;
+    ctx.fillStyle = '#ffffff';
+    pathRoundRect(lx - pad, ly - pad, logoSize + pad * 2, logoSize + pad * 2, pad * 0.8);
+    ctx.fill();
+    ctx.drawImage(logoImg, lx, ly, logoSize, logoSize);
+  }
+  drawBorderDecor(s, mp);
+  if (!isPro) {
+    ctx.save();
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = `600 ${Math.max(10, mp * 0.5)}px DM Sans, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText('AnimQR Free', canvas.width - mp * 0.55, canvas.height - mp * 0.45);
+    ctx.restore();
+  }
+}
+function drawFinder(x, y) {
+  const mp = modulePx;
+  ctx.fillStyle = '#1a1a1a'; pathRoundRect(x, y, 7 * mp, 7 * mp, 1.9 * mp); ctx.fill();
+  ctx.fillStyle = '#ffffff'; pathRoundRect(x + mp, y + mp, 5 * mp, 5 * mp, 1.35 * mp); ctx.fill();
+  ctx.fillStyle = '#1a1a1a'; pathRoundRect(x + 2 * mp, y + 2 * mp, 3 * mp, 3 * mp, 0.85 * mp); ctx.fill();
+}
+
+function play() {
+  if (!subFrames.length || isPlaying) return;
+  scrollToStage();
+  isPlaying = true; animStart = performance.now() - accDelay(frameIndex);
+  rafId = requestAnimationFrame(tick);
+}
+function pause() {
+  isPlaying = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  scrollToStage();
+}
+function accDelay(upTo) { let t = 0; for (let i = 0; i < upTo; i++) t += gifFrames[i].delay; return t; }
+function tick(now) {
+  if (!isPlaying) return;
+  const elapsed = now - animStart; let acc = 0, idx = 0;
+  for (; idx < gifFrames.length; idx++) { acc += gifFrames[idx].delay; if (elapsed < acc) break; }
+  if (idx >= gifFrames.length) { animStart = now; idx = 0; }
+  if (idx !== frameIndex) { frameIndex = idx; drawFrame(idx); }
+  rafId = requestAnimationFrame(tick);
+}
+
+const THEMES = {
+  paper: {
+    source: 'rocket', border: 'none', shape: 'square',
+    detail: 60, coherence: 55, soften: 6, darkLum: 78, lightLum: 230, vivid: 11,
+    colorLight: true, grayGuard: true, paletteSnap: true, showWhite: true,
+  },
+  ultramarine: {
+    source: 'rocket', border: 'neon', shape: 'square',
+    detail: 110, coherence: 70, soften: 4, darkLum: 82, lightLum: 220, vivid: 14,
+    colorLight: true, grayGuard: true, paletteSnap: true, showWhite: true,
+  },
+  inkgold: {
+    source: 'flame', border: 'chinese', shape: 'square',
+    detail: 85, coherence: 78, soften: 10, darkLum: 80, lightLum: 212, vivid: 13,
+    colorLight: true, grayGuard: true, paletteSnap: true, showWhite: true,
+  },
+  starlight: {
+    source: 'car', border: 'star', shape: 'dot',
+    detail: 75, coherence: 65, soften: 28, darkLum: 86, lightLum: 218, vivid: 11,
+    colorLight: true, grayGuard: true, paletteSnap: true, showWhite: true,
+  },
+  garden: {
+    source: 'flame', border: 'floral', shape: 'square',
+    detail: 95, coherence: 80, soften: 16, darkLum: 84, lightLum: 216, vivid: 12,
+    colorLight: true, grayGuard: true, paletteSnap: true, showWhite: true,
+  },
+  circuit: {
+    source: 'rocket', border: 'circuit', shape: 'square',
+    detail: 120, coherence: 45, soften: 2, darkLum: 88, lightLum: 225, vivid: 13,
+    colorLight: true, grayGuard: true, paletteSnap: true, showWhite: true,
+  },
+};
+
+function applyTheme(key) {
+  const t = THEMES[key];
+  if (!t) return;
+  // Soft paywall: always allow apply for preview
+  setSource(t.source, true);
+  borderStyle = t.border;
+  [...$('borderSeg').children].forEach(b => b.classList.toggle('on', b.dataset.border === t.border));
+  $('borderHint').textContent = BORDER_HINTS[t.border] || '';
+  shape = t.shape;
+  [...$('shapeSeg').children].forEach(b => b.classList.toggle('on', b.dataset.shape === t.shape));
+  shapeMask = buildShapeMask();
+  $('detail').value = t.detail; $('detailVal').textContent = t.detail;
+  $('coherence').value = t.coherence; $('coherenceVal').textContent = t.coherence;
+  $('soften').value = t.soften; $('softenVal').textContent = t.soften;
+  $('darkLum').value = t.darkLum; $('darkLumVal').textContent = t.darkLum;
+  $('lightLum').value = t.lightLum; $('lightLumVal').textContent = t.lightLum;
+  $('vivid').value = t.vivid; $('vividVal').textContent = (t.vivid / 10).toFixed(1);
+  $('colorLight').checked = t.colorLight;
+  $('grayGuard').checked = t.grayGuard;
+  $('paletteSnap').checked = t.paletteSnap;
+  $('showWhiteFrame').checked = t.showWhite;
+  updateGapUI();
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.toggle('on', c.dataset.theme === key));
+  const names = { paper: 'Paper Minimal', ultramarine: 'Ultramarine Neon', inkgold: 'Ink Gold Guochao', starlight: 'Starlight Roam', garden: 'Garden Vine', circuit: 'Circuit Workshop' };
+  statusEl.textContent = `Applied "${names[key]}" — updating…`;
+  updateProFeaturesBanner();
+  // Live: regenerate with new theme params if we already have content
+  if (qr && (animSource !== 'upload' || pendingBuf)) {
+    generate();
+  } else {
+    liveRedraw();
+  }
+}
+$('themeGrid').addEventListener('click', e => {
+  const card = e.target.closest('.theme-card');
+  if (!card) return;
+  applyTheme(card.dataset.theme);
+});
+
+const BORDER_HINTS = {
+  none: 'No border keeps maximum quiet zone, best for scanning.',
+  gold: 'Thin gold frame with diamond corners, elegant and restrained.',
+  floral: 'Soft vines and small flowers, fresh paper feel. · Pro export',
+  neon: 'Ultramarine glow, matches brand color. · Pro export',
+  pixel: 'Soft pixel blocks, cream-friendly. · Pro export',
+  star: 'Night stars and crescent moon, romantic and restrained. · Pro export',
+  circuit: 'Mint green traces and chip nodes. · Pro export',
+  chinese: 'Vermilion base + gold meander, classic and grand. · Pro export',
+};
+function liveRedraw() {
+  if (!subFrames.length || !qr) return;
+  setupCanvas();
+  drawFrame(Math.min(frameIndex, subFrames.length - 1));
+}
+
+$('borderSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  // Always allow selection (soft paywall)
+  [...$('borderSeg').children].forEach(x => x.classList.remove('on'));
+  btn.classList.add('on');
+  borderStyle = btn.dataset.border;
+  $('borderHint').textContent = BORDER_HINTS[borderStyle] || '';
+  liveRedraw();
+  updateProFeaturesBanner();
+});
+$('showWhiteFrame').addEventListener('change', () => {
+  liveRedraw();
+});
+
+function setSource(src, silent) {
+  // Always allow (soft paywall)
+  const prev = animSource;
+  animSource = src;
+  [...$('sourceSeg').children].forEach(b => b.classList.toggle('on', b.dataset.source === src));
+  const isUpload = src === 'upload';
+  $('uploadField').style.display = isUpload ? '' : 'none';
+  const hints = {
+    upload: 'Upload custom GIF · Pro export',
+    car: 'Car driving (procedural) · Pro export',
+    rocket: 'Rocket launch (procedural) · Free to export',
+    flame: 'Flame burning (procedural) · Pro export',
+  };
+  $('sourceHint').textContent = hints[src] || '';
+  if (!isUpload) {
+    pendingBuf = null;
+    $('fileName').textContent = 'Currently using preset animation';
+    if (!silent) statusEl.textContent = `Selected "${{ car: 'Car', rocket: 'Rocket', flame: 'Flame' }[src]}" — updating…`;
+  }
+  updateProFeaturesBanner();
+  // Live regenerate when switching preset animation
+  if (!silent && prev !== src && !isUpload && qr) {
+    generate();
+  }
+}
+$('sourceSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  setSource(btn.dataset.source);
+});
+
+$('eclSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  [...$('eclSeg').children].forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  ecl = btn.dataset.ecl;
+  if (qr && gifFrames.length) generate();
+});
+
+$('gif').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setSource('upload', true);
+  $('fileName').textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
+  statusEl.textContent = 'Reading GIF...';
+  pendingBuf = await file.arrayBuffer();
+  statusEl.textContent = 'GIF ready — click Generate (export needs Pro)';
+  updateProFeaturesBanner();
+});
+
+$('logoFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  logoImg = new Image();
+  logoImg.onload = () => {
+    $('logoPreview').src = url;
+    $('logoPreview').style.display = '';
+    $('logoName').textContent = file.name;
+    $('logoEnable').checked = true;
+    logoEnabled = true;
+    if (subFrames.length) drawFrame(Math.min(frameIndex, subFrames.length - 1));
+    updateProFeaturesBanner();
+  };
+  logoImg.src = url;
+});
+$('logoEnable').addEventListener('change', () => {
+  logoEnabled = $('logoEnable').checked && !!logoImg;
+  if (subFrames.length) drawFrame(Math.min(frameIndex, subFrames.length - 1));
+  updateProFeaturesBanner();
+});
+
+$('batchMode').addEventListener('change', () => {
+  $('batchField').style.display = $('batchMode').checked ? '' : 'none';
+  updateProFeaturesBanner();
+});
+
+function scrollToStage() {
+  const el = $('stageWrap');
+  if (!el) return;
+  // Mobile: preview is on top; still scroll into view for export buttons
+  requestAnimationFrame(() => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+async function generate() {
+  const urls = [];
+  if ($('batchMode').checked) {
+    const lines = $('batchUrls').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!lines.length) { alert('Please enter at least one link'); return; }
+    urls.push(...lines);
+  } else {
+    const url = $('url').value.trim();
+    if (!url) { alert('Please enter a link'); return; }
+    urls.push(url);
+  }
+  if (animSource === 'upload' && !pendingBuf) {
+    alert('Please upload a GIF first, or switch to a preset style');
+    return;
+  }
+  pause(); frameIndex = 0;
+  const results = [];
+  for (let ui = 0; ui < urls.length; ui++) {
+    const url = urls[ui];
+    statusEl.textContent = urls.length > 1 ? `Batch ${ui + 1}/${urls.length}...` : 'Generating...';
+    try {
+      qr = QRCode.create(url, { errorCorrectionLevel: ecl, version: QR_VERSION });
+    } catch (err) {
+      try {
+        qr = QRCode.create(url, { errorCorrectionLevel: ecl });
+        statusEl.textContent = `Link too long, fallback to v${qr.version}`;
+      } catch (err2) {
+        statusEl.textContent = 'Link too long: ' + err2.message;
+        continue;
+      }
+    }
+    await new Promise(r => setTimeout(r, 0));
+    try {
+      if (animSource === 'upload') gifFrames = await parseGifToFullFrames(pendingBuf);
+      else if (animSource === 'car') gifFrames = generateCarFrames(24, PRESET_SIZE);
+      else if (animSource === 'rocket') gifFrames = generateRocketFrames(28, PRESET_SIZE);
+      else if (animSource === 'flame') gifFrames = generateFlameFrames(20, PRESET_SIZE);
+    } catch (err) {
+      statusEl.textContent = 'Animation failed: ' + (err.message || err);
+      continue;
+    }
+    rebuildPalette(); buildTopology(); shapeMask = buildShapeMask(); setupCanvas();
+    await new Promise(r => setTimeout(r, 0));
+    buildSubFrames(); drawFrame(0);
+    results.push({ url, qr, frames: [...subFrames], gifFrames: [...gifFrames] });
+    saveHistory(url);
+  }
+  if (!results.length) return;
+  const last = results[results.length - 1];
+  qr = last.qr; subFrames = last.frames; gifFrames = last.gifFrames;
+  drawFrame(0);
+  setExportEnabled(true);
+  const subS = qr.modules.size * SUB;
+  const srcLabel = { upload: 'Upload GIF', car: 'Car', rocket: 'Rocket', flame: 'Flame' }[animSource];
+  const borderLabel = { none: 'None', gold: 'Gold', floral: 'Floral', neon: 'Neon', pixel: 'Pixel', star: 'Starry', circuit: 'Circuit', chinese: 'Chinese' }[borderStyle];
+  statusEl.textContent =
+    `Ready · ${srcLabel} · v${qr.version} (${qr.modules.size}×${qr.modules.size}) · ` +
+    `Detail ${subS}×${subS} · ${ecl} · ${gifFrames.length} frames · ${borderLabel}` +
+    (results.length > 1 ? ` · Batch ${results.length}` : '');
+  if (urls.length > 1) $('batchStatus').textContent = `Generated ${results.length} (showing last)`;
+  updateProFeaturesBanner();
+  play();
+  scrollToStage();
+}
+
+function setExportEnabled(on) {
+  ['btnPlay', 'btnPause', 'btnExportGif', 'btnExportPng', 'btnShare',
+   'stagePlay', 'stagePause', 'stageExportGif', 'stageExportPng'].forEach(id => {
+    const el = $(id);
+    if (el) el.disabled = !on;
+  });
+}
+
+let rebuildTimer = null;
+function scheduleRebuild() {
+  if (!qr || !gifFrames.length) return;
+  clearTimeout(rebuildTimer);
+  rebuildTimer = setTimeout(() => {
+    buildSubFrames();
+    drawFrame(Math.min(frameIndex, subFrames.length - 1));
+  }, 60);
+}
+function updateGapUI() {
+  const d = +$('darkLum').value, l = +$('lightLum').value;
+  const gap = Math.max(0, l - d);
+  $('gapFill').style.width = Math.min(100, Math.round(gap / 180 * 100)) + '%';
+  $('gapVal').textContent = gap;
+  $('gapVal').style.color = gap >= 110 ? '#0d7a5f' : gap >= 90 ? '#b8922a' : '#c43d2a';
+  $('darkFill').style.width = Math.round((d - 50) / 80 * 100) + '%';
+  $('coherenceFill').style.width = (+$('coherence').value) + '%';
+  $('softenFill').style.width = (+$('soften').value) + '%';
+  $('detailFill').style.width = (+$('detail').value / 2) + '%';
+}
+function bindSlider(id, valId, fmt = v => v) {
+  const el = $(id);
+  el.addEventListener('input', () => {
+    $(valId).textContent = fmt(+el.value);
+    updateGapUI(); scheduleRebuild();
+  });
+}
+bindSlider('darkLum', 'darkLumVal');
+bindSlider('lightLum', 'lightLumVal');
+bindSlider('vivid', 'vividVal', v => (v / 10).toFixed(1));
+bindSlider('soften', 'softenVal');
+bindSlider('coherence', 'coherenceVal');
+bindSlider('detail', 'detailVal');
+$('colorLight').addEventListener('change', scheduleRebuild);
+$('grayGuard').addEventListener('change', scheduleRebuild);
+$('paletteSnap').addEventListener('change', () => { rebuildPalette(); scheduleRebuild(); });
+$('moduleSize').addEventListener('input', e => {
+  const raw = +e.target.value;
+  modulePx = Math.max(SUB, Math.round(raw / SUB) * SUB);
+  $('moduleSizeVal').textContent = modulePx;
+  if (!qr) return;
+  setupCanvas();
+  if (subFrames.length) drawFrame(Math.min(frameIndex, subFrames.length - 1));
+});
+$('shapeSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  [...$('shapeSeg').children].forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  shape = btn.dataset.shape;
+  shapeMask = buildShapeMask();
+  if (subFrames.length) drawFrame(Math.min(frameIndex, subFrames.length - 1));
+});
+
+$('btnGenerate').addEventListener('click', generate);
+$('btnPlay').addEventListener('click', play);
+$('btnPause').addEventListener('click', pause);
+$('stagePlay').addEventListener('click', play);
+$('stagePause').addEventListener('click', pause);
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+let gifWorkerUrl = null;
+async function ensureGifWorker() {
+  if (gifWorkerUrl) return gifWorkerUrl;
+  const cdn = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js';
+  try {
+    const res = await fetch(cdn);
+    const text = await res.text();
+    gifWorkerUrl = URL.createObjectURL(new Blob([text], { type: 'application/javascript' }));
+  } catch (e) {
+    console.warn('GIF worker blob failed, using CDN', e);
+    gifWorkerUrl = cdn;
+  }
+  return gifWorkerUrl;
+}
+
+function setEncodeProgress(show, pct) {
+  const box = $('encodeProgress');
+  if (!box) return;
+  if (!show) {
+    box.classList.remove('show');
+    return;
+  }
+  box.classList.add('show');
+  const p = Math.max(0, Math.min(100, Math.round(pct || 0)));
+  $('encodePct').textContent = p >= 100 ? 'Finishing…' : `Encoding ${p}%`;
+  $('encodeFill').style.width = p + '%';
+}
+
+async function exportGif() {
+  if (!subFrames.length || !gifFrames.length) return;
+  pause();
+  scrollToStage();
+  statusEl.textContent = 'Preparing GIF…';
+  setEncodeProgress(true, 0);
+  $('btnExportGif').disabled = true;
+  $('stageExportGif').disabled = true;
+
+  const total = gifFrames.length;
+  const w = canvas.width, h = canvas.height;
+  let workerScript;
+  try {
+    workerScript = await ensureGifWorker();
+  } catch {
+    workerScript = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js';
+  }
+
+  // Prefer 1–2 workers; fall back to main-thread if workers fail
+  const tryRender = (workers) => new Promise((resolve, reject) => {
+    let settled = false;
+    const gif = new GIF({
+      workers,
+      quality: 12,
+      width: w,
+      height: h,
+      workerScript,
+      transparent: null,
+    });
+    const failTimer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        try { gif.abort(); } catch (_) {}
+        reject(new Error('GIF encode timeout'));
+      }
+    }, 90000);
+
+    gif.on('progress', p => {
+      setEncodeProgress(true, p * 100);
+      statusEl.textContent = `Encoding GIF… ${Math.round(p * 100)}%`;
+    });
+    gif.on('finished', blob => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(failTimer);
+      resolve(blob);
+    });
+    // Add frames as ImageData copies (more reliable than live canvas)
+    for (let i = 0; i < total; i++) {
+      drawFrame(i);
+      const img = ctx.getImageData(0, 0, w, h);
+      gif.addFrame(img, { delay: Math.max(gifFrames[i].delay || 40, 30), copy: true });
+      setEncodeProgress(true, ((i + 1) / total) * 35); // first 35% = frame add
+    }
+    statusEl.textContent = 'Encoding GIF…';
+    try {
+      gif.render();
+    } catch (err) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(failTimer);
+        reject(err);
+      }
+    }
+  });
+
+  try {
+    let blob;
+    try {
+      blob = await tryRender(2);
+    } catch (e1) {
+      console.warn('GIF workers=2 failed, retry main thread', e1);
+      statusEl.textContent = 'Retrying encode…';
+      blob = await tryRender(0);
+    }
+    downloadBlob(blob, 'animqr.gif');
+    statusEl.textContent = 'GIF exported' + (isPro ? '' : ' (watermarked)');
+    setEncodeProgress(true, 100);
+    setTimeout(() => setEncodeProgress(false), 800);
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = 'GIF encode failed. Try fewer frames or PNG. ' + (err.message || '');
+    setEncodeProgress(false);
+  }
+  drawFrame(Math.min(frameIndex, subFrames.length - 1));
+  $('btnExportGif').disabled = false;
+  $('stageExportGif').disabled = false;
+}
+
+function exportPng() {
+  if (!subFrames.length) return;
+  pause();
+  scrollToStage();
+  drawFrame(Math.min(frameIndex, subFrames.length - 1));
+  canvas.toBlob(blob => {
+    downloadBlob(blob, 'animqr.png');
+    statusEl.textContent = 'PNG exported' + (isPro ? '' : ' (watermarked)');
+  }, 'image/png');
+}
+
+async function doShare() {
+  if (!subFrames.length) return;
+  pause();
+  scrollToStage();
+  drawFrame(Math.min(frameIndex, subFrames.length - 1));
+  try {
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const file = new File([blob], 'animqr.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title: 'AnimQR', text: 'Animated art QR code', files: [file] });
+      statusEl.textContent = 'Shared';
+    } else if (navigator.share) {
+      await navigator.share({ title: 'AnimQR', text: 'Scan me', url: $('url').value });
+    } else {
+      downloadBlob(blob, 'animqr.png');
+      statusEl.textContent = 'PNG downloaded';
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') statusEl.textContent = 'Share canceled or failed';
+  }
+}
+
+$('btnExportGif').addEventListener('click', () => tryExport('gif'));
+$('btnExportPng').addEventListener('click', () => tryExport('png'));
+$('btnShare').addEventListener('click', () => tryExport('share'));
+$('stageExportGif').addEventListener('click', () => tryExport('gif'));
+$('stageExportPng').addEventListener('click', () => tryExport('png'));
+
+const HIST_KEY = 'animqr_history_v8';
+const HIST_LIMIT_FREE = 3, HIST_LIMIT_PRO = 50;
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveHistory(url) {
+  let list = loadHistory();
+  const thumb = canvas.toDataURL('image/jpeg', 0.5);
+  const item = { url, thumb, time: Date.now(), source: animSource, border: borderStyle, ecl };
+  list = list.filter(x => x.url !== url);
+  list.unshift(item);
+  list = list.slice(0, isPro ? HIST_LIMIT_PRO : HIST_LIMIT_FREE);
+  localStorage.setItem(HIST_KEY, JSON.stringify(list));
+  renderHistory();
+}
+function renderHistory() {
+  const list = loadHistory();
+  const el = $('historyList');
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--color-dim);padding:8px 0">No records yet</div>';
+    return;
+  }
+  el.innerHTML = list.map((item, i) => `
+    <div class="hist-item" data-idx="${i}">
+      <img class="hthumb" src="${item.thumb}" alt="" />
+      <div class="hmeta">
+        <div class="hurl">${item.url}</div>
+        <div class="htime">${new Date(item.time).toLocaleString()} · ${item.source || ''} · ${item.border || ''}</div>
+      </div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.hist-item').forEach(node => {
+    node.addEventListener('click', () => {
+      const item = list[+node.dataset.idx];
+      if (!item) return;
+      $('url').value = item.url;
+      statusEl.textContent = 'Loaded history link, click Generate';
+    });
+  });
+}
+renderHistory();
+
+$('btnUpgrade').addEventListener('click', () => {
+  pendingExportAction = null;
+  showPaywall({ reason: 'upgrade' });
+});
+$('btnClosePaywall').addEventListener('click', () => {
+  hidePaywall();
+  pendingExportAction = null;
+  showOfferModal();
+});
+$('btnMockPurchase').addEventListener('click', () => completePurchase('year'));
+document.querySelectorAll('#paywallModal .price-btn').forEach(btn => {
+  btn.addEventListener('click', () => completePurchase(btn.dataset.plan));
+});
+$('btnRestore') && $('btnRestore').addEventListener('click', () => restorePurchases());
+$('btnCloseOffer').addEventListener('click', hideOfferModal);
+$('btnTakeOffer').addEventListener('click', () => completePurchase('offer3'));
+document.querySelector('#offerModal .price-btn')?.addEventListener('click', () => completePurchase('offer3'));
+
+/* ===== Init demo ===== */
+shapeMask = buildShapeMask();
+updateGapUI();
+setSource('rocket', true);
+$('borderHint').textContent = BORDER_HINTS.none;
+updateProFeaturesBanner();
+
+(async function showDemo() {
+  try {
+    statusEl.textContent = 'Loading demo...';
+    qr = QRCode.create('https://example.com', { errorCorrectionLevel: 'Q', version: 5 });
+    gifFrames = generateRocketFrames(28, PRESET_SIZE);
+    rebuildPalette(); buildTopology(); shapeMask = buildShapeMask(); setupCanvas();
+    await new Promise(r => setTimeout(r, 0));
+    buildSubFrames(); drawFrame(0);
+    setExportEnabled(true);
+    statusEl.textContent = 'Demo ready · Edit the link → Generate · Export when happy. Pro styles: try free, unlock on export.';
+    play();
+  } catch (e) {
+    console.warn('Demo failed:', e);
+    ctx.fillStyle = '#f0f0ec';
+    ctx.fillRect(0, 0, 300, 300);
+    ctx.fillStyle = '#6d6868';
+    ctx.font = '500 14px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Enter a link and click Generate', 150, 155);
+    statusEl.textContent = 'Enter a link and click "Generate QR Code" to start.';
+  }
+})();
+</script>
+</body>
+</html>
