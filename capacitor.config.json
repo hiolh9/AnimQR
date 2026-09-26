@@ -1,0 +1,8 @@
+{
+  "appId": "com.animqr.app",
+  "appName": "AnimQR",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
