@@ -9,6 +9,8 @@ AnimQR turns any link into a scannable, animated piece of art. Choose a theme, a
 
 AnimQR is a mobile-ready app that generates artistic QR codes with animated interiors.
 
+In simpler word, it **merges a GIF with your QR code**.
+
 You can preview every style for free. Exporting designs that use Pro features (certain borders, animations, logo, batch mode, etc.) triggers a soft paywall.
 
 ## Key Features
