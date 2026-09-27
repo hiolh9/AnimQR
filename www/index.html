@@ -1239,6 +1239,7 @@ const RC_PACKAGE_IDS = {
   lifetime: '$rc_lifetime',
   offer3: '3day',
 };
+let suppressScroll = false;
 
 let isPro = localStorage.getItem('animqr_pro') === '1';
 let offerShownThisSession = false;
@@ -1246,7 +1247,7 @@ let pendingExportAction = null;
 let rcReady = false;
 let rcOfferings = null;
 let Purchases = null;
-
+let uploadedBuf = null;   // 用户上传的 GIF 原始数据，切主题时不清除
 const FREE_BORDERS = new Set(['none', 'gold']);
 const FREE_SOURCES = new Set(['rocket']);
 const PRO_BORDERS = new Set(['floral', 'neon', 'pixel', 'star', 'circuit', 'chinese']);
@@ -2582,11 +2583,13 @@ const THEMES = {
   },
 };
 
-function applyTheme(key) {
+async function applyTheme(key) {
   const t = THEMES[key];
   if (!t) return;
-  setSource(t.source, true);
-  borderStyle = t.border;
+const keepUpload = (animSource === 'upload' && uploadedBuf);
+  if (!keepUpload) {
+    setSource(t.source, true);
+  }  borderStyle = t.border;
   [...$('borderSeg').children].forEach(b => b.classList.toggle('on', b.dataset.border === t.border));
   $('borderHint').textContent = BORDER_HINTS[t.border] || '';
   shape = t.shape;
@@ -2607,10 +2610,15 @@ function applyTheme(key) {
   const names = { paper: 'Paper Minimal', ultramarine: 'Ultramarine Neon', inkgold: 'Ink Gold Guochao', starlight: 'Starlight Roam', garden: 'Garden Vine', circuit: 'Circuit Workshop' };
   statusEl.textContent = `Applied "${names[key]}" — updating…`;
   updateProFeaturesBanner();
-  if (qr && (animSource !== 'upload' || pendingBuf)) {
-    generate();
-  } else {
-    liveRedraw();
+  suppressScroll = true;
+  try {
+    if (qr && (animSource !== 'upload' || pendingBuf)) {
+      await generate();     // 注意要 await
+    } else {
+      liveRedraw();
+    }
+  } finally {
+    suppressScroll = false;
   }
 }
 $('themeGrid').addEventListener('click', e => {
@@ -2662,9 +2670,13 @@ function setSource(src, silent) {
     flame: 'Flame burning (procedural) · Pro export',
   };
   $('sourceHint').textContent = hints[src] || '';
-  if (!isUpload) {
+  if (isUpload) {
+    pendingBuf = uploadedBuf;        // 切回上传时恢复缓存
+  } else {
     pendingBuf = null;
-    $('fileName').textContent = 'Currently using preset animation';
+    $('fileName').textContent = uploadedBuf
+      ? '已缓存上传的 GIF（切回 Upload 可继续使用）'
+      : 'Currently using preset animation';
     if (!silent) statusEl.textContent = `Selected "${{ car: 'Car', rocket: 'Rocket', flame: 'Flame' }[src]}" — updating…`;
   }
   updateProFeaturesBanner();
@@ -2694,10 +2706,18 @@ $('gif').addEventListener('change', async e => {
   $('fileName').textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
   statusEl.textContent = 'Reading GIF...';
   pendingBuf = await file.arrayBuffer();
-  statusEl.textContent = 'GIF ready — click Generate (export needs Pro)';
   updateProFeaturesBanner();
-});
 
+  // 自动生成，但不滚到舞台
+  suppressScroll = true;
+  try {
+    await generate();
+  } catch (err) {
+    console.warn('[auto-generate]', err);
+  } finally {
+    suppressScroll = false;
+  }
+});
 $('logoFile').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -2726,6 +2746,8 @@ $('batchMode').addEventListener('change', () => {
 });
 
 function scrollToStage() {
+  if (suppressScroll) return;   // ← 新增
+
   const el = $('stageWrap');
   if (!el) return;
   requestAnimationFrame(() => {
